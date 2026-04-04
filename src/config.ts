@@ -11,6 +11,8 @@ export interface Config {
   authProxyUrl?: string
   authProxyToken?: string
   bodyLimit: number
+  logLevel: 'debug' | 'info' | 'warn' | 'error'
+  logFormat: 'json' | 'plain'
 }
 
 export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
@@ -42,6 +44,8 @@ export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
       sseRingBufferSize: 0,
       maxConcurrentSessionsPerUser: 0,
       bodyLimit: 0,
+      logLevel: 'info',
+      logFormat: 'json',
     }
   }
 
@@ -65,5 +69,21 @@ export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
     authProxyUrl,
     authProxyToken,
     bodyLimit: 1024 * 1024, // 1MB
+    logLevel: parseLogLevel(env.LOG_LEVEL),
+    logFormat: parseLogFormat(env.LOG_FORMAT),
   }
+}
+
+function parseLogLevel(input: string | undefined): 'debug' | 'info' | 'warn' | 'error' {
+  if (input === 'debug' || input === 'info' || input === 'warn' || input === 'error') {
+    return input
+  }
+  return 'info'
+}
+
+function parseLogFormat(input: string | undefined): 'json' | 'plain' {
+  if (input === 'json' || input === 'plain') {
+    return input
+  }
+  return 'json'
 }

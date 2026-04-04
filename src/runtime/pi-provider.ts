@@ -3,10 +3,13 @@ import {
   InMemoryAuthStorageBackend,
   ModelRegistry,
 } from '@mariozechner/pi-coding-agent'
+import type { Logger } from '../logger.js'
+import { createLogger, withError } from '../logger.js'
 
 interface PiProviderOptions {
   authProxyUrl?: string
   authProxyToken?: string
+  logger?: Logger
 }
 
 export class PiProvider {
@@ -16,10 +19,12 @@ export class PiProvider {
   private syncInterval: ReturnType<typeof setInterval> | null = null
   private proxyUrl: string | null
   private proxyToken: string | null
+  private logger: Logger
 
   constructor(options: PiProviderOptions) {
     this.proxyUrl = options.authProxyUrl ?? null
     this.proxyToken = options.authProxyToken ?? null
+    this.logger = options.logger ?? createLogger('info', 'json')
 
     if (this.proxyUrl) {
       this.backend = new InMemoryAuthStorageBackend()
@@ -40,7 +45,9 @@ export class PiProvider {
     // Start periodic sync (30s)
     this.syncInterval = setInterval(() => {
       this.syncFromProxy().catch((err) => {
-        console.error('[pi-provider] Sync failed, retaining last-good data:', err.message)
+        this.logger.warn('pi_provider.sync_failed_retaining_last_good', withError({
+          proxyUrl: this.proxyUrl,
+        }, err))
       })
     }, 30_000)
   }
@@ -56,6 +63,10 @@ export class PiProvider {
     })
 
     if (!res.ok) {
+      this.logger.warn('pi_provider.sync_http_error', {
+        proxyUrl: this.proxyUrl,
+        status: res.status,
+      })
       throw new Error(`Auth proxy returned ${res.status}`)
     }
 
@@ -69,6 +80,7 @@ export class PiProvider {
 
     this.authStorage.reload()
     this.modelRegistry.refresh()
+    this.logger.debug('pi_provider.sync_succeeded', { proxyUrl: this.proxyUrl })
   }
 
   getAuthStorage(): AuthStorage {

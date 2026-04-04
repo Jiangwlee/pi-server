@@ -1,3 +1,5 @@
+import type { Logger } from '../logger.js'
+import { createLogger, withError } from '../logger.js'
 export type SessionStatus = 'idle' | 'running' | 'error'
 
 export type SSEEnvelope = {
@@ -33,14 +35,17 @@ interface SessionRegistryOptions {
   ringBufferSize: number
   maxConcurrentPerUser: number
   promptTimeoutMs?: number
+  logger?: Logger
 }
 
 export class SessionRegistry {
   private entries = new Map<string, SessionEntry>()
   private options: SessionRegistryOptions
+  private logger: Logger
 
   constructor(options: SessionRegistryOptions) {
     this.options = options
+    this.logger = options.logger ?? createLogger('info', 'json')
   }
 
   private getOrCreateEntry(sessionId: string): SessionEntry {
@@ -71,24 +76,33 @@ export class SessionRegistry {
     const entry = this.getOrCreateEntry(sessionId)
 
     if (entry.status === 'running') {
+      this.logger.warn('session.send_rejected_busy', { sessionId, userId })
       throw new Error('Session is busy')
     }
 
     // Check per-user concurrent limit
     const runningForUser = this.countRunningForUser(userId)
     if (runningForUser >= this.options.maxConcurrentPerUser) {
+      this.logger.warn('session.send_rejected_concurrent_limit', {
+        sessionId,
+        userId,
+        runningForUser,
+        limit: this.options.maxConcurrentPerUser,
+      })
       throw new Error(`Too many concurrent sessions for user (limit: ${this.options.maxConcurrentPerUser})`)
     }
 
     entry.userId = userId
     entry.status = 'running'
+    this.logger.info('session.send_started', { sessionId, userId })
     this.broadcast(entry, 'status', { status: 'running' })
 
-    return this.runSend(entry, sessionPath, cwd, message)
+    return this.runSend(entry, sessionId, sessionPath, cwd, message)
   }
 
   private async runSend(
     entry: SessionEntry,
+    sessionId: string,
     sessionPath: string,
     cwd: string,
     message: string,
@@ -101,6 +115,11 @@ export class SessionRegistry {
       this.broadcast(entry, 'error', { code: 'timeout', message: 'Session prompt timed out' })
       this.broadcast(entry, 'status', { status: 'error' })
       entry.sdkSession?.abort().catch(() => {})
+      this.logger.error('session.prompt_timeout', {
+        sessionId,
+        sessionPath,
+        cwd,
+      })
     }, timeoutMs)
 
     try {
@@ -118,6 +137,13 @@ export class SessionRegistry {
       }
       entry.status = 'idle'
       this.broadcast(entry, 'status', { status: 'idle' })
+      this.logger.info('session.send_completed', {
+        sessionId,
+        userId: entry.userId,
+        sessionPath,
+        cwd,
+        messageLength: message.length,
+      })
     } catch (err) {
       if (timedOut) {
         return
@@ -126,6 +152,12 @@ export class SessionRegistry {
       const errorMsg = err instanceof Error ? err.message : String(err)
       this.broadcast(entry, 'error', { code: 'PROMPT_ERROR', message: errorMsg })
       this.broadcast(entry, 'status', { status: 'error' })
+      this.logger.error('session.send_failed', withError({
+        sessionId,
+        userId: entry.userId,
+        sessionPath,
+        cwd,
+      }, err))
     } finally {
       if (entry.timer) {
         clearTimeout(entry.timer)
@@ -146,6 +178,7 @@ export class SessionRegistry {
     const entry = this.entries.get(sessionId)
     if (!entry?.sdkSession) return
     await entry.sdkSession.abort()
+    this.logger.info('session.abort_called', { sessionId })
   }
 
   getStatus(sessionId: string): SessionStatus {
@@ -155,8 +188,16 @@ export class SessionRegistry {
   subscribe(sessionId: string, handler: SSEClientHandler): () => void {
     const entry = this.getOrCreateEntry(sessionId)
     entry.sseClients.add(handler)
+    this.logger.debug('session.sse_subscribed', {
+      sessionId,
+      clientCount: entry.sseClients.size,
+    })
     return () => {
       entry.sseClients.delete(handler)
+      this.logger.debug('session.sse_unsubscribed', {
+        sessionId,
+        clientCount: entry.sseClients.size,
+      })
     }
   }
 
@@ -170,11 +211,12 @@ export class SessionRegistry {
   }
 
   dispose(): void {
-    for (const [, entry] of this.entries) {
+    for (const [sessionId, entry] of this.entries) {
       if (entry.status === 'running' && entry.sdkSession) {
         entry.sdkSession.abort().catch(() => {})
         entry.status = 'idle'
         this.broadcast(entry, 'status', { status: 'idle' })
+        this.logger.warn('session.force_aborted_on_dispose', { sessionId })
       }
       if (entry.timer) {
         clearTimeout(entry.timer)
@@ -214,6 +256,12 @@ export class SessionRegistry {
     }
     for (const handler of failedHandlers) {
       entry.sseClients.delete(handler)
+    }
+    if (failedHandlers.length > 0) {
+      this.logger.warn('session.sse_handler_removed', {
+        removedCount: failedHandlers.length,
+        remainingCount: entry.sseClients.size,
+      })
     }
   }
 

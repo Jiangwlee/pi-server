@@ -4,12 +4,15 @@ import type { SessionStore } from '../stores/session-store.js'
 import type { SessionRegistry } from '../runtime/session-registry.js'
 import { resolveSessionPath, resolveWorkspacePath, ensureDirs } from '../runtime/path-resolver.js'
 import { readFileSync } from 'node:fs'
+import type { Logger } from '../logger.js'
+import { createLogger, withError } from '../logger.js'
 import '../auth/types.js'
 
 export function createRuntimeRoutes(
   sessionStore: SessionStore,
   registry: SessionRegistry,
   dataDir: string,
+  logger: Logger = createLogger('info', 'json'),
 ): Hono {
   const app = new Hono()
 
@@ -38,12 +41,23 @@ export function createRuntimeRoutes(
     try {
       // Fire and forget — client listens via SSE
       registry.send(sessionId, userId, sessionPath, workspacePath, body.message)
-        .catch(() => {}) // errors are broadcast via SSE
+        .catch((err) => {
+          logger.error('runtime.send_async_failed', withError({
+            requestId: c.get('requestId'),
+            sessionId,
+            userId,
+          }, err))
+        }) // errors are also broadcast via SSE
       return c.json({ ok: true }, 202)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('busy')) return c.json({ error: msg }, 409)
       if (msg.includes('concurrent')) return c.json({ error: msg }, 429)
+      logger.error('runtime.send_rejected', withError({
+        requestId: c.get('requestId'),
+        sessionId,
+        userId,
+      }, err))
       return c.json({ error: msg }, 500)
     }
   })
@@ -142,6 +156,11 @@ export function createRuntimeRoutes(
         )
       return c.json({ messages: entries })
     } catch {
+      logger.warn('runtime.history_read_failed', {
+        requestId: c.get('requestId'),
+        sessionId,
+        userId,
+      })
       return c.json({ messages: [] })
     }
   })

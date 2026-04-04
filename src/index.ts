@@ -5,6 +5,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 
 import { loadConfig } from './config.js'
 import { initDb } from './db.js'
@@ -18,6 +19,7 @@ import { SessionRegistry } from './runtime/session-registry.js'
 import { createSessionRoutes } from './routes/sessions.js'
 import { createRuntimeRoutes } from './routes/runtime.js'
 import { createModelRoutes } from './routes/models.js'
+import { createLogger, withError } from './logger.js'
 
 import {
   createAgentSession,
@@ -26,10 +28,35 @@ import {
 } from '@mariozechner/pi-coding-agent'
 
 const config = loadConfig()
+const logger = createLogger(config.logLevel, config.logFormat)
 
 // Auth Server mode: minimal server that only serves auth.json
 if (config.authServer) {
   const app = new Hono()
+  app.use('*', async (c, next) => {
+    const requestId = randomUUID()
+    c.set('requestId', requestId)
+    c.header('x-request-id', requestId)
+    const start = Date.now()
+    try {
+      await next()
+      logger.info('http_request', {
+        requestId,
+        method: c.req.method,
+        path: c.req.path,
+        status: c.res.status,
+        durationMs: Date.now() - start,
+      })
+    } catch (err) {
+      logger.error('http_request_failed', withError({
+        requestId,
+        method: c.req.method,
+        path: c.req.path,
+        durationMs: Date.now() - start,
+      }, err))
+      throw err
+    }
+  })
 
   app.get('/auth.json', (c) => {
     const token = c.req.header('Authorization')
@@ -47,7 +74,7 @@ if (config.authServer) {
   })
 
   const server = serve({ fetch: app.fetch, port: config.port })
-  console.log(`[pi-server] Auth server mode on port ${config.port}`)
+  logger.info('server.auth_mode_started', { port: config.port })
 
   process.on('SIGTERM', () => server.close())
   process.on('SIGINT', () => server.close())
@@ -65,6 +92,7 @@ if (config.authServer) {
   const piProvider = new PiProvider({
     authProxyUrl: config.authProxyUrl,
     authProxyToken: config.authProxyToken,
+    logger,
   })
 
   // Session Registry with real SDK factory
@@ -84,11 +112,38 @@ if (config.authServer) {
     ringBufferSize: config.sseRingBufferSize,
     maxConcurrentPerUser: config.maxConcurrentSessionsPerUser,
     promptTimeoutMs: 15 * 60 * 1000,
+    logger,
   })
 
   // Middleware
   app.use('*', cors())
   app.use('*', bodyLimit({ maxSize: config.bodyLimit }))
+  app.use('*', async (c, next) => {
+    const requestId = randomUUID()
+    c.set('requestId', requestId)
+    c.header('x-request-id', requestId)
+    const start = Date.now()
+    try {
+      await next()
+      logger.info('http_request', {
+        requestId,
+        method: c.req.method,
+        path: c.req.path,
+        status: c.res.status,
+        durationMs: Date.now() - start,
+        userId: c.get('userId'),
+      })
+    } catch (err) {
+      logger.error('http_request_failed', withError({
+        requestId,
+        method: c.req.method,
+        path: c.req.path,
+        durationMs: Date.now() - start,
+        userId: c.get('userId'),
+      }, err))
+      throw err
+    }
+  })
 
   // Auth routes (public)
   app.route('/', createEmailPublicAuthRoutes(userStore, config.sessionSecret))
@@ -113,7 +168,7 @@ if (config.authServer) {
 
   // API routes
   app.route('/', createSessionRoutes(sessionStore, registry))
-  app.route('/', createRuntimeRoutes(sessionStore, registry, config.dataDir))
+  app.route('/', createRuntimeRoutes(sessionStore, registry, config.dataDir, logger))
   app.route('/', createModelRoutes(piProvider))
 
   // Startup
@@ -122,10 +177,10 @@ if (config.authServer) {
     await piProvider.init()
 
     const server = serve({ fetch: app.fetch, port: config.port })
-    console.log(`[pi-server] Running on port ${config.port}`)
+    logger.info('server.started', { port: config.port })
 
     const shutdown = () => {
-      console.log('[pi-server] Shutting down...')
+      logger.info('server.shutting_down')
       registry.dispose()
       piProvider.dispose()
       db.close()
@@ -137,7 +192,7 @@ if (config.authServer) {
   }
 
   start().catch((err) => {
-    console.error('[pi-server] Failed to start:', err)
+    logger.error('server.failed_to_start', withError({}, err))
     process.exit(1)
   })
 }
