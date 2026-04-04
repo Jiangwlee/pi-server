@@ -74,7 +74,6 @@ const ChatSendButtonImpl = function ChatSendButton(
               padding: '6px 16px',
               borderRadius: 6,
               font: 'inherit',
-              background: 'transparent',
             }}
           >
             {stopText}
@@ -90,7 +89,6 @@ const ChatSendButtonImpl = function ChatSendButton(
               padding: '6px 16px',
               borderRadius: 6,
               font: 'inherit',
-              background: 'transparent',
             }}
           >
             {sendText}

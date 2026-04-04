@@ -2,13 +2,352 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Pi Minimal — Design tokens
+   ══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --bg: #ffffff;
-  --fg: #111111;
+  color-scheme: light;
+
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  --background: #fafafa;
+  --panel: #ffffff;
+  --panel-elevated: #ffffff;
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
+  --text-primary: #0a0a0a;
+  --text-secondary: #737373;
+  --text-muted: #a3a3a3;
+
+  /* ── Borders & dividers ──────────────────────────────────────────────── */
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  /* ── Accent ──────────────────────────────────────────────────────────── */
+  --accent: #171717;
+  --accent-foreground: #ffffff;
+  --accent-soft: rgba(0, 0, 0, 0.05);
+
+  /* ── Semantic ────────────────────────────────────────────────────────── */
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.08);
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.08);
+  --warning: #ca8a04;
+  --warning-soft: rgba(202, 138, 4, 0.08);
+
+  /* ── Interactive ─────────────────────────────────────────────────────── */
+  --hover: rgba(0, 0, 0, 0.04);
+  --active: rgba(0, 0, 0, 0.07);
+  --focus-ring: 0 0 0 2px rgba(0, 0, 0, 0.12);
+  --selection: rgba(0, 0, 0, 0.06);
+
+  /* ── Geometry ────────────────────────────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  /* ── Scrollbar ───────────────────────────────────────────────────────── */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro SC",
+    "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "IBM Plex Mono", monospace;
 }
 
-html,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #111113;
+  --panel: #191a1e;
+  --panel-elevated: #222327;
+
+  --text-primary: #ececec;
+  --text-secondary: #8b8b8b;
+  --text-muted: #5c5c5c;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  --accent: #e5e5e5;
+  --accent-foreground: #111113;
+  --accent-soft: rgba(255, 255, 255, 0.06);
+
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.12);
+
+  --hover: rgba(255, 255, 255, 0.04);
+  --active: rgba(255, 255, 255, 0.07);
+  --focus-ring: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  --selection: rgba(255, 255, 255, 0.06);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Base reset
+   ══════════════════════════════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
-  background: var(--bg);
-  color: var(--fg);
+  margin: 0;
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+pre,
+code {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--selection);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Scrollbar — 3px thin, auto-hide via [data-scrolling]
+   ══════════════════════════════════════════════════════════════════════════ */
+
+*::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 2px;
+  transition: background-color 0.3s ease;
+}
+
+[data-scrolling]::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+}
+
+[data-scrolling]::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   pi-prose — Markdown content typography
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.pi-prose {
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+  max-width: none;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.pi-prose > *:first-child {
+  margin-top: 0;
+}
+
+.pi-prose > *:last-child {
+  margin-bottom: 0;
+}
+
+.pi-prose p {
+  margin: 0.6em 0;
+}
+
+.pi-prose h1,
+.pi-prose h2,
+.pi-prose h3,
+.pi-prose h4,
+.pi-prose h5,
+.pi-prose h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary);
+  margin: 1.2em 0 0.4em;
+}
+
+.pi-prose h1 { font-size: 1.5rem; }
+.pi-prose h2 { font-size: 1.25rem; }
+.pi-prose h3 { font-size: 1.1rem; }
+.pi-prose h4,
+.pi-prose h5,
+.pi-prose h6 { font-size: 0.9rem; }
+
+.pi-prose strong { font-weight: 600; }
+.pi-prose em { font-style: italic; }
+
+.pi-prose a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 150ms ease;
+}
+
+.pi-prose a:hover {
+  text-decoration-color: var(--text-primary);
+}
+
+.pi-prose ul,
+.pi-prose ol {
+  margin: 0.6em 0;
+  padding-left: 1.5em;
+}
+
+.pi-prose ul { list-style-type: disc; }
+.pi-prose ol { list-style-type: decimal; }
+
+.pi-prose li {
+  margin: 0.25em 0;
+}
+
+.pi-prose li > ul,
+.pi-prose li > ol {
+  margin: 0.15em 0;
+}
+
+.pi-prose blockquote {
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.pi-prose blockquote p {
+  margin: 0.3em 0;
+}
+
+.pi-prose hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+
+/* ── inline code ──────────────────────────────────────────────────────── */
+
+.pi-prose code:not(pre code) {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+/* ── table ────────────────────────────────────────────────────────────── */
+
+.pi-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 0.85em;
+}
+
+.pi-prose th,
+.pi-prose td {
+  border: 1px solid var(--border);
+  padding: 0.45em 0.75em;
+  text-align: left;
+}
+
+.pi-prose th {
+  font-weight: 600;
+  background: var(--accent-soft);
+}
+
+.pi-prose tr:nth-child(even) td {
+  background: var(--hover);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Code block wrapper
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.pi-code-block {
+  margin: 0.8em 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.pi-code-block pre {
+  margin: 0;
+  padding: 1em 1.25em;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  white-space: pre;
+  background: var(--panel);
+}
+
+.pi-code-block pre code {
+  white-space: pre;
+}
+
+/* shiki dual-theme */
+.shiki {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+[data-theme="dark"] .shiki {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+.shiki span {
+  color: var(--shiki-light);
+}
+
+[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark);
+}
+
+/* fallback while shiki loads */
+.pi-code-loading {
+  margin: 0;
+  padding: 1em 1.25em;
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  overflow-x: auto;
+  white-space: pre;
 }

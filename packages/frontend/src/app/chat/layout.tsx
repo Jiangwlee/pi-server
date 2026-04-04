@@ -18,14 +18,14 @@ export default function ChatLayoutPage({ children }: { children: ReactNode }) {
 
   return (
     <AuthGuard
-      loadingFallback={<div className="p-8 text-zinc-500">Checking authentication...</div>}
+      loadingFallback={<div className="flex h-screen items-center justify-center text-sm text-text-muted">Checking authentication...</div>}
       unauthenticatedFallback={<UnauthenticatedRedirect />}
-      errorFallback={<div className="p-8 text-red-600">Authentication failed. Please login again.</div>}
+      errorFallback={<div className="flex h-screen items-center justify-center text-sm text-danger">Authentication failed. Please login again.</div>}
     >
       <ChatLayout
         classNames={{
-          root: 'min-h-screen',
-          sidebar: 'border-r border-zinc-200 p-4',
+          root: 'h-screen',
+          sidebar: 'border-r border-border bg-panel p-4',
           main: 'h-screen',
         }}
         sidebar={
@@ -35,14 +35,14 @@ export default function ChatLayoutPage({ children }: { children: ReactNode }) {
             selectedSessionId={selectedSessionId}
             classNames={{
               header: 'mb-4',
-              newButton: 'w-full rounded border px-3 py-2 text-sm',
-              empty: 'text-sm text-zinc-500',
-              list: 'space-y-2',
-              item: 'rounded border p-3',
-              itemSelected: 'border-zinc-900 bg-zinc-50',
-              itemLabel: 'text-sm font-medium',
-              itemMeta: 'mt-1 text-xs text-zinc-500',
-              itemDeleteButton: 'mt-2 text-xs text-red-600',
+              newButton: 'w-full rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground transition-opacity duration-fast hover:opacity-85',
+              empty: 'text-sm text-text-muted',
+              list: 'mt-3 flex flex-col gap-1',
+              item: 'rounded-md px-3 py-2.5 text-sm transition-colors duration-fast cursor-pointer hover:bg-hover',
+              itemSelected: 'bg-accent-soft font-medium',
+              itemLabel: 'text-sm text-text-primary',
+              itemMeta: 'mt-0.5 text-xs text-text-muted',
+              itemDeleteButton: 'mt-1.5 text-xs text-danger opacity-0 group-hover:opacity-100 transition-opacity duration-fast',
             }}
             onCreateSession={async () => {
               const created = await createSession()
@@ -71,5 +71,5 @@ function UnauthenticatedRedirect() {
   useEffect(() => {
     router.replace('/login')
   }, [router])
-  return <div className="p-8 text-zinc-500">Redirecting to login...</div>
+  return <div className="flex h-screen items-center justify-center text-sm text-text-muted">Redirecting to login...</div>
 }

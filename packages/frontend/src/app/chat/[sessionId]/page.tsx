@@ -11,18 +11,18 @@ export default function SessionPage() {
       <ChatPanel
         sessionId={params.sessionId}
         classNames={{
-          root: 'flex h-full flex-col gap-4 p-6',
-          header: 'border-b border-zinc-200 pb-3',
-          messageList: 'flex-1 space-y-3 overflow-y-auto rounded border border-zinc-200 p-4',
-          messageItem: 'text-sm leading-6',
-          messageUser: 'text-zinc-900',
-          messageAssistant: 'text-zinc-700',
-          messageTool: 'text-zinc-600',
-          composer: 'rounded border border-zinc-200 p-2',
-          textarea: 'w-full text-sm',
-          modelSelect: 'rounded border border-zinc-300 px-2 py-2 text-sm',
-          sendButton: 'rounded bg-zinc-900 px-4 py-1.5 text-sm text-white',
-          footer: 'flex items-center gap-4 text-xs text-zinc-500',
+          root: 'flex h-full flex-col',
+          header: 'flex items-center border-b border-border px-6 py-3',
+          messageList: 'flex-1 overflow-y-auto px-6 py-4',
+          messageItem: 'text-sm leading-relaxed',
+          messageUser: 'text-text-primary',
+          messageAssistant: 'pi-prose text-text-primary',
+          messageTool: 'text-text-secondary',
+          composer: 'mx-6 mb-4 rounded-lg border border-border bg-panel shadow-sm',
+          textarea: 'w-full text-sm text-text-primary placeholder:text-text-muted',
+          modelSelect: 'rounded-md border border-border bg-panel px-2.5 py-1.5 text-xs text-text-secondary outline-none transition-shadow duration-fast focus:shadow-focus-ring',
+          sendButton: 'rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition-opacity duration-fast hover:opacity-85 disabled:opacity-40',
+          footer: 'flex items-center gap-4 px-6 pb-3 text-xs text-text-muted',
         }}
       />
     </div>

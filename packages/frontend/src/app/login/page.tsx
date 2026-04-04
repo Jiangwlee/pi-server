@@ -19,18 +19,20 @@ export default function LoginPage() {
   }, [router, user])
 
   return (
-    <main className="mx-auto max-w-md p-8">
-      <h1 className="mb-6 text-2xl">Login</h1>
-      <LoginForm
-        classNames={{
-          root: 'flex flex-col gap-4',
-          field: 'flex flex-col gap-1',
-          input: 'rounded border px-3 py-2',
-          actions: 'flex items-center gap-3',
-          error: 'text-red-600',
-        }}
-        onSuccess={() => router.push('/chat')}
-      />
+    <main className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-panel p-8 shadow-sm">
+        <h1 className="mb-6 text-xl font-semibold text-text-primary">Sign in</h1>
+        <LoginForm
+          classNames={{
+            root: 'flex flex-col gap-5',
+            field: 'flex flex-col gap-1.5',
+            input: 'rounded-md border border-border bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none transition-shadow duration-fast focus:shadow-focus-ring',
+            actions: 'flex items-center gap-3 pt-1',
+            error: 'text-sm text-danger',
+          }}
+          onSuccess={() => router.push('/chat')}
+        />
+      </div>
     </main>
   )
 }
