@@ -27,7 +27,9 @@ RUN npm config set loglevel verbose \
 
 COPY . /app
 
-RUN npm run build --verbose
+RUN npm run build --verbose \
+  && chmod +x dist/cli.js \
+  && npm link
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

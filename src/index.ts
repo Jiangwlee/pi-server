@@ -38,6 +38,7 @@ if (config.authServer) {
     const requestId = randomUUID()
     c.set('requestId', requestId)
     c.header('x-request-id', requestId)
+    await next()
   })
   app.use('*', createRequestLoggerMiddleware(logger))
 
@@ -105,6 +106,7 @@ if (config.authServer) {
     const requestId = randomUUID()
     c.set('requestId', requestId)
     c.header('x-request-id', requestId)
+    await next()
   })
   app.use('*', createRequestLoggerMiddleware(logger, { includeUserId: true }))
 

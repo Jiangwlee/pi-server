@@ -26,6 +26,8 @@ describe('PiProvider', () => {
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'test-token',
+      initialSyncMaxAttempts: 2,
+      initialSyncRetryMs: 0,
     })
 
     await expect(provider.init()).rejects.toThrow('Network error')
@@ -39,12 +41,16 @@ describe('PiProvider', () => {
     }
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
+      text: () => Promise.resolve(JSON.stringify(mockData)),
       json: () => Promise.resolve(mockData),
     })
 
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'my-token',
+      initialSyncMaxAttempts: 2,
+      initialSyncRetryMs: 0,
     })
 
     await provider.init()
@@ -72,12 +78,19 @@ describe('PiProvider', () => {
 
     globalThis.fetch = vi.fn().mockImplementation(() => {
       const data = responses[callCount++] ?? responses[responses.length - 1]
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(data) })
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify(data)),
+        json: () => Promise.resolve(data),
+      })
     })
 
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'tok',
+      initialSyncMaxAttempts: 2,
+      initialSyncRetryMs: 0,
     })
 
     await provider.init()
@@ -98,6 +111,8 @@ describe('PiProvider', () => {
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
+          status: 200,
+          text: () => Promise.resolve(JSON.stringify({ 'anthropic': { apiKey: 'sk-good' } })),
           json: () => Promise.resolve({ 'anthropic': { apiKey: 'sk-good' } }),
         })
       }
@@ -107,6 +122,8 @@ describe('PiProvider', () => {
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'tok',
+      initialSyncMaxAttempts: 2,
+      initialSyncRetryMs: 0,
     })
 
     await provider.init()
@@ -122,12 +139,16 @@ describe('PiProvider', () => {
   it('should clean up interval on dispose', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
+      text: () => Promise.resolve('{}'),
       json: () => Promise.resolve({}),
     })
 
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'tok',
+      initialSyncMaxAttempts: 2,
+      initialSyncRetryMs: 0,
     })
 
     await provider.init()

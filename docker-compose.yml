@@ -3,8 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: pi-server:local
-    container_name: pi-auth-server
+    image: ${PI_SERVER_IMAGE:-pi-server:local}
     environment:
       PI_ROLE: auth-server
       PORT: 3001
@@ -12,15 +11,25 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
       NODE_USE_ENV_PROXY: "1"
     ports:
-      - "3001:3001"
+      - "${PI_AUTH_PORT:-3001}:3001"
     volumes:
       - ${HOME}/.pi/agent/auth.json:/root/.pi/agent/auth.json:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          node -e "fetch('http://127.0.0.1:3001/auth.json')
+          .then(r=>process.exit((r.status===401||r.ok)?0:1)).catch(()=>process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
 
   pi-server:
-    image: pi-server:local
-    container_name: pi-server
+    image: ${PI_SERVER_IMAGE:-pi-server:local}
     depends_on:
-      - auth-server
+      auth-server:
+        condition: service_healthy
     environment:
       PI_ROLE: pi-server
       PORT: 3000
@@ -29,15 +38,18 @@ services:
       AUTH_PROXY_URL: http://auth-server:3001
       AUTH_PROXY_TOKEN: ${AUTH_PROXY_TOKEN}
       TZ: ${TZ:-Asia/Shanghai}
-      HTTP_PROXY: ${HTTP_PROXY:-}
-      HTTPS_PROXY: ${HTTPS_PROXY:-}
-      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,auth-server,pi-server}
+      HTTP_PROXY: ${PI_HTTP_PROXY:-}
+      HTTPS_PROXY: ${PI_HTTPS_PROXY:-}
+      http_proxy: ${PI_HTTP_PROXY:-}
+      https_proxy: ${PI_HTTPS_PROXY:-}
+      NO_PROXY: ${PI_NO_PROXY:-localhost,127.0.0.1,::1},auth-server,pi-auth-server,pi-server,host.docker.internal
+      no_proxy: ${PI_NO_PROXY:-localhost,127.0.0.1,::1},auth-server,pi-auth-server,pi-server,host.docker.internal
       NODE_USE_ENV_PROXY: "1"
       TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test-user@gmail.com}
       TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-test-pass-123}
       TEST_USER_LOGIN: ${TEST_USER_LOGIN:-test-user}
     ports:
-      - "3000:3000"
+      - "${PI_SERVER_PORT:-3000}:3000"
     volumes:
       - pi_server_data:/app/data
     extra_hosts:
