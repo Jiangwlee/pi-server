@@ -6,7 +6,7 @@
 2. 修复后必须运行相关测试或命令验证，未验证不能说"fixed"或"已修复"。
 3. 用户要求讨论、分析、brainstorming 时，不要改代码。等用户明确要求实现后再动手。
 
-## 架构（四层模型）
+## 架构（Monorepo + 四层模型）
 
 ```
 HTTP Layer (Hono + @hono/node-server)
@@ -29,26 +29,23 @@ HTTP Layer (Hono + @hono/node-server)
 ## 项目结构
 
 ```
-src/
-├── auth/           # 认证: email.ts, github.ts, middleware.ts, types.ts
-├── http/           # HTTP 中间件: request-logger.ts
-├── routes/         # 路由: sessions.ts, runtime.ts, models.ts
-├── runtime/        # 运行时: session-registry.ts, pi-provider.ts, path-resolver.ts
-├── stores/         # 数据层: user-store.ts, session-store.ts
-├── config.ts       # 配置加载 (env + CLI args)
-├── db.ts           # SQLite 初始化 + migration
-├── logger.ts       # 结构化日志 (json/plain)
-├── index.ts        # 入口: auth-server 模式 / 正常模式
-└── cli.ts          # 管理员 CLI: add-user, list-users, reset-password
-tests/              # vitest 测试
-docker/             # Dockerfile + entrypoint.sh
-scripts/            # smoke-test.sh (Docker 端到端冒烟测试)
+packages/
+├── server/                  # @pi-server/server
+│   ├── src/                 # 后端源码
+│   ├── tests/               # vitest
+│   └── docker/              # Dockerfile + entrypoint.sh
+├── ui/                      # @pi-server/ui (hooks + components)
+└── frontend/                # @pi-server/frontend (Next.js)
+
+scripts/                     # smoke-test.sh (后端 Docker 端到端冒烟测试)
+docker-compose.yml           # auth-server + pi-server + frontend
 ```
 
 ## 安装
 
 ```bash
-npm install
+corepack enable
+pnpm install
 ```
 
 ## 环境变量
@@ -58,6 +55,8 @@ npm install
 | `SESSION_SECRET` | 正常模式必填 | - | 签名 cookie 密钥，最小 32 字节 |
 | `PORT` | 否 | `3000` | 监听端口 |
 | `PI_SERVER_DATA` | 否 | `./data` | 数据目录 (SQLite + 用户文件) |
+| `PUBLIC_SERVER_URL` | 否 | `http://localhost:$PORT` | 生成 GitHub OAuth callback URL |
+| `FRONTEND_URL` | 否 | `http://localhost:3100` | GitHub OAuth 成功后跳转地址 |
 | `GITHUB_CLIENT_ID` | 否 | - | GitHub OAuth |
 | `GITHUB_CLIENT_SECRET` | 否 | - | GitHub OAuth |
 | `AUTH_SERVER_TOKEN` | auth-server 必填 | - | Bearer token |
@@ -75,17 +74,17 @@ BrainStorm → Plan → Code → Review → Test → Commit
 ```
 
 - 设计文档: `docs/brainstorming/specs/`
-- 测试命令: `npm test` (vitest)
+- 测试命令: `pnpm test` (workspace)
 - 冒烟测试: `scripts/smoke-test.sh` (Docker 端到端，需要 jq)
-- 构建命令: `npm run build` (tsc)
-- 开发启动: `npm run dev` (tsx)
+- 构建命令: `pnpm build`
+- 开发启动: `pnpm dev:server`
 
 ## 完成标准
 
 提交前必须全部通过：
 
-- [ ] `npm test` 通过
-- [ ] `npm run build` 无错误
+- [ ] `pnpm test` 通过
+- [ ] `pnpm build` 无错误
 - [ ] 无硬编码敏感信息
 
 ## PR 期望

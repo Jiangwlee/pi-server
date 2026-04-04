@@ -1,6 +1,6 @@
 # pi-server
 
-Multi-user HTTP backend framework for [pi coding-agent](https://github.com/mariozechner/pi).
+Monorepo for a multi-user `pi-server` backend, reusable React UI package, and Next.js frontend.
 
 ## Why
 
@@ -46,18 +46,33 @@ Frontend (any web app)
 - **Path security** — Frontend passes relative paths only; backend resolves under `{dataDir}/users/{userId}/` with traversal prevention
 - **Structured logging** — JSON/plain format, log level control, request tracing with `x-request-id`
 
-## Quick Start (Local)
+## Monorepo Layout
+
+```text
+pi-server/
+├── packages/
+│   ├── server/    # @pi-server/server (Hono backend)
+│   ├── ui/        # @pi-server/ui (React hooks + components)
+│   └── frontend/  # @pi-server/frontend (Next.js app)
+├── docker-compose.yml
+├── scripts/smoke-test.sh
+└── pnpm-workspace.yaml
+```
+
+## Quick Start (Local Dev)
 
 ### Prerequisites
 
 - Node.js 22+
+- pnpm (via `corepack enable`)
 - jq (required by `scripts/smoke-test.sh`)
 - pi coding-agent installed and logged into at least one LLM provider (`~/.pi/agent/auth.json` must exist)
 
 ### Install
 
 ```bash
-npm install
+corepack enable
+pnpm install
 ```
 
 ### Configure
@@ -71,23 +86,24 @@ cp .env.example .env
 
 ```bash
 # Development (from source)
-npx tsx src/cli.ts add-user --email admin@example.com --password secret --login admin
-npx tsx src/cli.ts list-users
-npx tsx src/cli.ts reset-password --email admin@example.com --password newpass
+pnpm --filter @pi-server/server exec tsx src/cli.ts add-user --email admin@example.com --password secret --login admin
+pnpm --filter @pi-server/server exec tsx src/cli.ts list-users
+pnpm --filter @pi-server/server exec tsx src/cli.ts reset-password --email admin@example.com --password newpass
 
 # Production (after build)
-node dist/cli.js add-user --email admin@example.com --password secret --login admin
+pnpm --filter @pi-server/server build
+node packages/server/dist/cli.js add-user --email admin@example.com --password secret --login admin
 ```
 
 ### Start Server
 
 ```bash
 # Development
-npm run dev
+pnpm dev:server
 
 # Production
-npm run build
-npm start
+pnpm --filter @pi-server/server build
+pnpm --filter @pi-server/server start
 ```
 
 The server reads `~/.pi/agent/auth.json` for LLM credentials. Ensure you have logged in via pi CLI first:
@@ -112,12 +128,13 @@ In distributed deployments, each node is fully independent — own users, own da
 
 ### Docker Compose (Recommended)
 
-The included `docker-compose.yml` deploys a two-container setup:
+The included `docker-compose.yml` deploys a three-container setup:
 
 | Container | Role | Port |
 |-----------|------|------|
-| `pi-auth-server` | Auth Server — serves `~/.pi/agent/auth.json` from host | 3001 |
+| `auth-server` | Auth Server — serves `~/.pi/agent/auth.json` from host | 3001 |
 | `pi-server` | Application server — pulls credentials from auth-server | 3000 |
+| `frontend` | Next.js UI (`/backend/*` proxied to `pi-server`) | 3100 |
 
 #### Step 1: Prepare LLM credentials
 
@@ -154,6 +171,13 @@ TZ=Asia/Shanghai                                     # Container timezone
 PI_HTTP_PROXY=                                       # Set if containers need a proxy for LLM APIs
 PI_HTTPS_PROXY=
 PI_NO_PROXY=localhost,127.0.0.1,::1
+PI_FRONTEND_PORT=3100
+PI_PUBLIC_SERVER_URL=http://localhost:3000          # Required for GitHub OAuth callback URL generation
+PI_FRONTEND_URL=http://localhost:3100               # Required for GitHub OAuth post-login redirect
+
+# If accessed via Tailscale/public IP, set absolute URLs:
+# PI_PUBLIC_SERVER_URL=http://100.90.192.71:3000
+# PI_FRONTEND_URL=http://100.90.192.71:3100
 ```
 
 #### Step 3: Build and start
@@ -169,8 +193,8 @@ docker compose up -d
 # Check auth-server is serving credentials
 curl -s -H "Authorization: Bearer $AUTH_SERVER_TOKEN" http://localhost:3001/auth.json | head -c 200
 
-# Login with the auto-created user
-curl -s -X POST http://localhost:3000/auth/login \
+# Login with the auto-created user (through frontend proxy)
+curl -s -X POST http://localhost:3100/backend/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"your-password"}'
 ```
@@ -179,11 +203,11 @@ curl -s -X POST http://localhost:3000/auth/login \
 
 ```bash
 # View logs
-docker compose logs -f pi-server
+docker compose logs -f auth-server pi-server frontend
 
 # User management inside container
-docker exec pi-server pi-server list-users
-docker exec pi-server pi-server add-user --email new@example.com --password pass --login newuser
+docker compose exec pi-server pi-server list-users
+docker compose exec pi-server pi-server add-user --email new@example.com --password pass --login newuser
 
 # Run smoke test (requires jq, .env, and ~/.pi/agent/auth.json)
 scripts/smoke-test.sh
@@ -203,13 +227,13 @@ docker compose build && docker compose up -d
 For single-machine deployment without credential sharing:
 
 ```bash
-npm run build
+pnpm --filter @pi-server/server build
 
 export SESSION_SECRET="your-secret-at-least-32-bytes-long"
 export PI_SERVER_DATA="./data"
 
-node dist/cli.js add-user --email admin@example.com --password secret --login admin
-node dist/index.js
+node packages/server/dist/cli.js add-user --email admin@example.com --password secret --login admin
+node packages/server/dist/index.js
 ```
 
 Reads `~/.pi/agent/auth.json` directly.
@@ -220,7 +244,7 @@ Run a dedicated credential server on the machine where `pi login` was performed:
 
 ```bash
 export AUTH_SERVER_TOKEN="shared-bearer-token"
-node dist/index.js --auth-server
+node packages/server/dist/index.js --auth-server
 # Serves GET /auth.json on PORT (default 3000), protected by Bearer token
 ```
 
@@ -230,7 +254,7 @@ Connect application nodes to a remote auth server:
 
 ```bash
 export SESSION_SECRET="your-secret"
-node dist/index.js \
+node packages/server/dist/index.js \
   --auth-proxy-url http://auth-host:3001 \
   --auth-proxy-token shared-bearer-token
 ```
@@ -247,6 +271,8 @@ Sync behavior:
 | `SESSION_SECRET` | Yes (normal mode) | — | Cookie signing key, min 32 bytes |
 | `PORT` | No | `3000` | HTTP listen port |
 | `PI_SERVER_DATA` | No | `./data` | Data directory (SQLite DB + user files) |
+| `PUBLIC_SERVER_URL` | No | `http://localhost:$PORT` | Public server base URL used to build GitHub OAuth callback |
+| `FRONTEND_URL` | No | `http://localhost:3100` | Frontend redirect target after GitHub OAuth |
 | `GITHUB_CLIENT_ID` | No | — | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | No | — | GitHub OAuth client secret |
 | `AUTH_SERVER_TOKEN` | Yes (auth-server) | — | Bearer token for `/auth.json` |
@@ -332,23 +358,23 @@ pi-server list-users
 pi-server reset-password --email <email> --password <newPassword>
 ```
 
-In Docker: `docker exec pi-server pi-server <command>`
+In Docker: `docker compose exec pi-server pi-server <command>`
 
 ## Testing
 
 ```bash
-npm test              # Run all tests (vitest)
-npm run test:watch    # Watch mode
+pnpm test             # Run all workspace tests
+pnpm --filter @pi-server/server test:watch
 scripts/smoke-test.sh # Docker end-to-end smoke test (requires jq)
 ```
 
 ## Development
 
 ```bash
-npm install           # Install dependencies
-npm run dev           # Start dev server (tsx, auto-restart)
-npm run build         # Compile TypeScript to dist/
-npm start             # Run compiled production build
+pnpm install
+pnpm dev:server
+pnpm build
+pnpm smoke
 ```
 
 ## License
