@@ -23,7 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "@hono/node-server": "^1.19.12",
-    "@mariozechner/pi-coding-agent": "file:../../Github/pi-mono/packages/coding-agent",
+    "@mariozechner/pi-coding-agent": "^0.65.0",
     "arctic": "^3.7.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.8.0",

@@ -1,0 +1,45 @@
+services:
+  auth-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: pi-server:local
+    container_name: pi-auth-server
+    environment:
+      PI_ROLE: auth-server
+      PORT: 3001
+      AUTH_SERVER_TOKEN: ${AUTH_SERVER_TOKEN}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ${HOME}/.pi/agent/auth.json:/root/.pi/agent/auth.json:ro
+
+  pi-server:
+    image: pi-server:local
+    container_name: pi-server
+    depends_on:
+      - auth-server
+    environment:
+      PI_ROLE: pi-server
+      PORT: 3000
+      SESSION_SECRET: ${SESSION_SECRET}
+      PI_SERVER_DATA: /app/data
+      AUTH_PROXY_URL: http://auth-server:3001
+      AUTH_PROXY_TOKEN: ${AUTH_PROXY_TOKEN}
+      TZ: ${TZ:-Asia/Shanghai}
+      HTTP_PROXY: http://host.docker.internal:10801
+      HTTPS_PROXY: http://host.docker.internal:10801
+      NO_PROXY: localhost,127.0.0.1,auth-server,pi-server
+      TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test-user@gmail.com}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-test-pass-123}
+      TEST_USER_LOGIN: ${TEST_USER_LOGIN:-test-user}
+    ports:
+      - "3000:3000"
+    volumes:
+      - pi_server_data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  pi_server_data:
