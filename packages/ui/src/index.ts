@@ -1,7 +1,7 @@
 /**
  * @pi-server/ui entrypoint
- * - Exposes the UI package public API surface.
- * - Current scope: client layer only (api client + SSE parsing + shared types).
- * - Hooks/components will be added in later vertical slices.
+ * Exposes client, hooks, and components for frontend integration.
  */
 export * from './client/index.js'
+export * from './hooks/index.js'
+export * from './components/index.js'
