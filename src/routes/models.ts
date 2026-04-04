@@ -7,7 +7,7 @@ export function createModelRoutes(piProvider: PiProvider): Hono {
 
   app.get('/api/models', (c) => {
     const registry = piProvider.getModelRegistry()
-    const models = registry.getAll()
+    const models = registry.getAvailable()
     return c.json(models)
   })
 
