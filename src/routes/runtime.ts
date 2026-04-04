@@ -5,14 +5,14 @@ import type { SessionRegistry } from '../runtime/session-registry.js'
 import { resolveSessionPath, resolveWorkspacePath, ensureDirs } from '../runtime/path-resolver.js'
 import { readFileSync } from 'node:fs'
 import type { Logger } from '../logger.js'
-import { createLogger, withError } from '../logger.js'
+import { withError } from '../logger.js'
 import '../auth/types.js'
 
 export function createRuntimeRoutes(
   sessionStore: SessionStore,
   registry: SessionRegistry,
   dataDir: string,
-  logger: Logger = createLogger('info', 'json'),
+  logger: Logger,
 ): Hono {
   const app = new Hono()
 

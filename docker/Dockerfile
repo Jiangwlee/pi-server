@@ -13,20 +13,7 @@ deb-src http://mirrors.aliyun.com/debian/ bookworm-updates main non-free contrib
 EOF
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-RUN cat > /etc/apt/sources.list <<'EOF'
-deb https://mirrors.aliyun.com/debian/ bookworm main non-free contrib
-deb-src https://mirrors.aliyun.com/debian/ bookworm main non-free contrib
-deb https://mirrors.aliyun.com/debian-security/ bookworm-security main
-deb-src https://mirrors.aliyun.com/debian-security/ bookworm-security main
-deb https://mirrors.aliyun.com/debian/ bookworm-updates main non-free contrib
-deb-src https://mirrors.aliyun.com/debian/ bookworm-updates main non-free contrib
-EOF
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ tzdata \
+  && apt-get install -y --no-install-recommends ca-certificates python3 make g++ tzdata \
   && rm -rf /var/lib/apt/lists/*
 
 RUN npm config set registry https://registry.npmmirror.com

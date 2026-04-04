@@ -29,9 +29,9 @@ services:
       AUTH_PROXY_URL: http://auth-server:3001
       AUTH_PROXY_TOKEN: ${AUTH_PROXY_TOKEN}
       TZ: ${TZ:-Asia/Shanghai}
-      HTTP_PROXY: http://host.docker.internal:10801
-      HTTPS_PROXY: http://host.docker.internal:10801
-      NO_PROXY: localhost,127.0.0.1,auth-server,pi-server
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,auth-server,pi-server}
       NODE_USE_ENV_PROXY: "1"
       TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test-user@gmail.com}
       TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-test-pass-123}

@@ -20,6 +20,7 @@ import { createSessionRoutes } from './routes/sessions.js'
 import { createRuntimeRoutes } from './routes/runtime.js'
 import { createModelRoutes } from './routes/models.js'
 import { createLogger, withError } from './logger.js'
+import { createRequestLoggerMiddleware } from './http/request-logger.js'
 
 import {
   createAgentSession,
@@ -37,26 +38,8 @@ if (config.authServer) {
     const requestId = randomUUID()
     c.set('requestId', requestId)
     c.header('x-request-id', requestId)
-    const start = Date.now()
-    try {
-      await next()
-      logger.info('http_request', {
-        requestId,
-        method: c.req.method,
-        path: c.req.path,
-        status: c.res.status,
-        durationMs: Date.now() - start,
-      })
-    } catch (err) {
-      logger.error('http_request_failed', withError({
-        requestId,
-        method: c.req.method,
-        path: c.req.path,
-        durationMs: Date.now() - start,
-      }, err))
-      throw err
-    }
   })
+  app.use('*', createRequestLoggerMiddleware(logger))
 
   app.get('/auth.json', (c) => {
     const token = c.req.header('Authorization')
@@ -122,28 +105,8 @@ if (config.authServer) {
     const requestId = randomUUID()
     c.set('requestId', requestId)
     c.header('x-request-id', requestId)
-    const start = Date.now()
-    try {
-      await next()
-      logger.info('http_request', {
-        requestId,
-        method: c.req.method,
-        path: c.req.path,
-        status: c.res.status,
-        durationMs: Date.now() - start,
-        userId: c.get('userId'),
-      })
-    } catch (err) {
-      logger.error('http_request_failed', withError({
-        requestId,
-        method: c.req.method,
-        path: c.req.path,
-        durationMs: Date.now() - start,
-        userId: c.get('userId'),
-      }, err))
-      throw err
-    }
   })
+  app.use('*', createRequestLoggerMiddleware(logger, { includeUserId: true }))
 
   // Auth routes (public)
   app.route('/', createEmailPublicAuthRoutes(userStore, config.sessionSecret))

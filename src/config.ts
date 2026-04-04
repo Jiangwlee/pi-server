@@ -1,3 +1,6 @@
+import type { LogFormat, LogLevel } from './logger.js'
+import { parseLogFormat, parseLogLevel } from './logger.js'
+
 export interface Config {
   port: number
   dataDir: string
@@ -11,8 +14,8 @@ export interface Config {
   authProxyUrl?: string
   authProxyToken?: string
   bodyLimit: number
-  logLevel: 'debug' | 'info' | 'warn' | 'error'
-  logFormat: 'json' | 'plain'
+  logLevel: LogLevel
+  logFormat: LogFormat
 }
 
 export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
@@ -72,18 +75,4 @@ export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
     logLevel: parseLogLevel(env.LOG_LEVEL),
     logFormat: parseLogFormat(env.LOG_FORMAT),
   }
-}
-
-function parseLogLevel(input: string | undefined): 'debug' | 'info' | 'warn' | 'error' {
-  if (input === 'debug' || input === 'info' || input === 'warn' || input === 'error') {
-    return input
-  }
-  return 'info'
-}
-
-function parseLogFormat(input: string | undefined): 'json' | 'plain' {
-  if (input === 'json' || input === 'plain') {
-    return input
-  }
-  return 'json'
 }

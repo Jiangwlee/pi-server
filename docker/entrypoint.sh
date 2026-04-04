@@ -15,6 +15,13 @@ TEST_USER_LOGIN="${TEST_USER_LOGIN:-test-user}"
 node dist/cli.js add-user \
   --email "$TEST_USER_EMAIL" \
   --password "$TEST_USER_PASSWORD" \
-  --login "$TEST_USER_LOGIN" >/tmp/add-user.log 2>&1 || true
+  --login "$TEST_USER_LOGIN" >/tmp/add-user.log 2>&1 || {
+    if grep -q "already exists" /tmp/add-user.log; then
+      echo "Test user already exists: $TEST_USER_EMAIL"
+    else
+      cat /tmp/add-user.log >&2
+      exit 1
+    fi
+  }
 
 exec node --use-env-proxy dist/index.js --auth-proxy-url "${AUTH_PROXY_URL:-http://auth-server:3001}" --auth-proxy-token "${AUTH_PROXY_TOKEN:-change-me}"
