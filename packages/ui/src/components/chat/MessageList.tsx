@@ -1,13 +1,10 @@
-import type { ChatMessage } from '../../hooks/use-chat.js'
-import { getTextContent } from '../../hooks/use-chat.js'
+import type { ChatMessage } from '../../client/types.js'
+import { MessageItem, type MessageItemClassNames } from './MessageItem.js'
 
 type MessageListClassNames = {
   root?: string
   item?: string
-  user?: string
-  assistant?: string
-  tool?: string
-}
+} & MessageItemClassNames
 
 export function MessageList(
   {
@@ -21,24 +18,15 @@ export function MessageList(
   },
 ) {
   return (
-    <ul className={[classNames?.root, className].filter(Boolean).join(' ')}>
-      {messages.map((message) => {
-        const roleClass = message.role === 'user'
-          ? classNames?.user
-          : message.role === 'assistant'
-            ? classNames?.assistant
-            : classNames?.tool
-
-        return (
-          <li
-            key={message.id}
-            className={[classNames?.item, roleClass].filter(Boolean).join(' ')}
-          >
-            <strong>{message.role}: </strong>
-            <span>{getTextContent(message)}</span>
-          </li>
-        )
-      })}
-    </ul>
+    <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
+      {messages.map((message) => (
+        <MessageItem
+          key={message.id}
+          message={message}
+          className={classNames?.item}
+          classNames={classNames}
+        />
+      ))}
+    </div>
   )
 }
