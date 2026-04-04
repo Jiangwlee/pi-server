@@ -37,6 +37,8 @@ services:
       PI_SERVER_DATA: /app/data
       AUTH_PROXY_URL: http://auth-server:3001
       AUTH_PROXY_TOKEN: ${AUTH_PROXY_TOKEN}
+      PUBLIC_SERVER_URL: ${PI_PUBLIC_SERVER_URL:-http://localhost:3000}
+      FRONTEND_URL: ${PI_FRONTEND_URL:-http://localhost:3100}
       TZ: ${TZ:-Asia/Shanghai}
       HTTP_PROXY: ${PI_HTTP_PROXY:-}
       HTTPS_PROXY: ${PI_HTTPS_PROXY:-}
@@ -69,6 +71,8 @@ services:
     build:
       context: .
       dockerfile: packages/frontend/docker/Dockerfile
+      args:
+        PI_SERVER_URL: http://pi-server:3000
     image: ${PI_FRONTEND_IMAGE:-pi-frontend:local}
     environment:
       PI_SERVER_URL: http://pi-server:3000

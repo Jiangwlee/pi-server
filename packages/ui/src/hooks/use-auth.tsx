@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { ApiClient } from '../client/api-client.js'
 import type { User } from '../client/types.js'
 
@@ -27,7 +27,7 @@ export function AuthProvider(
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function checkAuth(): Promise<void> {
+  const checkAuth = useCallback(async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
@@ -40,9 +40,9 @@ export function AuthProvider(
     } finally {
       setLoading(false)
     }
-  }
+  }, [authClient])
 
-  async function login(email: string, password: string): Promise<void> {
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
@@ -55,9 +55,9 @@ export function AuthProvider(
     } finally {
       setLoading(false)
     }
-  }
+  }, [authClient])
 
-  async function logout(): Promise<void> {
+  const logout = useCallback(async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
@@ -70,16 +70,16 @@ export function AuthProvider(
     } finally {
       setLoading(false)
     }
-  }
+  }, [authClient])
 
-  const value: AuthContextValue = {
+  const value: AuthContextValue = useMemo(() => ({
     user,
     loading,
     error,
     login,
     logout,
     checkAuth,
-  }
+  }), [user, loading, error, login, logout, checkAuth])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../hooks/use-auth.js'
 
 export function AuthGuard(
@@ -18,14 +18,17 @@ export function AuthGuard(
 ): React.JSX.Element | null {
   const { user, loading, error, checkAuth } = useAuth()
   const [checked, setChecked] = useState(!requireCheck)
+  const checkingRef = useRef(false)
 
   useEffect(() => {
-    if (!requireCheck || checked || user) return
+    if (!requireCheck || checked || user || checkingRef.current) return
+    checkingRef.current = true
     let cancelled = false
     checkAuth()
       .catch(() => {})
       .finally(() => {
         if (!cancelled) setChecked(true)
+        checkingRef.current = false
       })
     return () => {
       cancelled = true

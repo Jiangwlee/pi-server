@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     void checkAuth().catch(() => {})
-  }, [checkAuth])
+  }, [])
 
   useEffect(() => {
     if (user) {

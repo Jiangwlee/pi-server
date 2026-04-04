@@ -113,14 +113,14 @@ if (config.authServer) {
   // Auth routes (public)
   app.route('/', createEmailPublicAuthRoutes(userStore, config.sessionSecret))
   if (config.githubClientId && config.githubClientSecret) {
-    const callbackUrl = `http://localhost:${config.port}/auth/github/callback`
+    const callbackUrl = `${config.publicServerUrl}/auth/github/callback`
     app.route('/', createGithubAuthRoutes(
       config.githubClientId,
       config.githubClientSecret,
       callbackUrl,
       userStore,
       config.sessionSecret,
-      '/',
+      config.frontendUrl,
     ))
   }
 

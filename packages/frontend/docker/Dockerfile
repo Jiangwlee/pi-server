@@ -2,6 +2,9 @@ FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
+ARG PI_SERVER_URL=http://pi-server:3000
+ENV PI_SERVER_URL=${PI_SERVER_URL}
+
 RUN corepack enable \
   && corepack prepare pnpm@latest --activate \
   && npm config set registry https://registry.npmmirror.com \

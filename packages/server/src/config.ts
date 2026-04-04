@@ -5,6 +5,8 @@ export interface Config {
   port: number
   dataDir: string
   sessionSecret: string
+  publicServerUrl: string
+  frontendUrl: string
   githubClientId?: string
   githubClientSecret?: string
   sseRingBufferSize: number
@@ -42,6 +44,8 @@ export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
       port,
       dataDir: '',
       sessionSecret: '',
+      publicServerUrl: '',
+      frontendUrl: '',
       authServer: true,
       authServerToken,
       sseRingBufferSize: 0,
@@ -58,11 +62,15 @@ export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
   }
 
   const dataDir = env.PI_SERVER_DATA ?? './data'
+  const publicServerUrl = env.PUBLIC_SERVER_URL ?? `http://localhost:${port}`
+  const frontendUrl = env.FRONTEND_URL ?? `http://localhost:3100`
 
   return {
     port,
     dataDir,
     sessionSecret,
+    publicServerUrl,
+    frontendUrl,
     githubClientId: env.GITHUB_CLIENT_ID,
     githubClientSecret: env.GITHUB_CLIENT_SECRET,
     sseRingBufferSize: parseInt(env.SSE_RING_BUFFER_SIZE ?? '200', 10),

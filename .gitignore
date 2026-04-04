@@ -3,3 +3,12 @@ dist/
 data/
 *.db
 .env
+
+# local agent tooling artifacts
+.agents/
+.claude/
+AGENTS.md
+
+# monorepo build outputs
+packages/*/dist/
+packages/frontend/.next/
