@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../../hooks/use-chat.js'
+import { getTextContent } from '../../hooks/use-chat.js'
 
 type MessageListClassNames = {
   root?: string
@@ -34,7 +35,7 @@ export function MessageList(
             className={[classNames?.item, roleClass].filter(Boolean).join(' ')}
           >
             <strong>{message.role}: </strong>
-            <span>{message.content}</span>
+            <span>{getTextContent(message)}</span>
           </li>
         )
       })}
