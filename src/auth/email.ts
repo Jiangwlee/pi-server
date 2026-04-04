@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt'
 import type { UserStore } from '../stores/user-store.js'
 import { clearAuthCookie, setAuthCookie } from './middleware.js'
 
-export function createEmailAuthRoutes(
+export function createEmailPublicAuthRoutes(
   userStore: UserStore,
   sessionSecret: string,
 ): Hono {
@@ -29,12 +29,16 @@ export function createEmailAuthRoutes(
     return c.json({ id: user.id, displayName: user.displayName, email: user.email })
   })
 
+  return app
+}
+
+export function createEmailProtectedAuthRoutes(
+  userStore: UserStore,
+): Hono {
+  const app = new Hono()
+
   app.post('/auth/change-password', async (c) => {
     const userId = c.get('userId')
-    if (!userId) {
-      return c.json({ error: 'Unauthorized' }, 401)
-    }
-
     const user = userStore.findById(userId)
     if (!user) {
       return c.json({ error: 'User not found' }, 404)

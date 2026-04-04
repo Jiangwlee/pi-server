@@ -11,7 +11,7 @@ import { initDb } from './db.js'
 import { UserStore } from './stores/user-store.js'
 import { SessionStore } from './stores/session-store.js'
 import { authMiddleware } from './auth/middleware.js'
-import { createEmailAuthRoutes } from './auth/email.js'
+import { createEmailProtectedAuthRoutes, createEmailPublicAuthRoutes } from './auth/email.js'
 import { createGithubAuthRoutes } from './auth/github.js'
 import { PiProvider } from './runtime/pi-provider.js'
 import { SessionRegistry } from './runtime/session-registry.js'
@@ -89,12 +89,9 @@ if (config.authServer) {
   // Middleware
   app.use('*', cors())
   app.use('*', bodyLimit({ maxSize: config.bodyLimit }))
-  app.use('/auth/change-password', authMiddleware(config.sessionSecret))
-  app.use('/auth/me', authMiddleware(config.sessionSecret))
-  app.use('/auth/logout', authMiddleware(config.sessionSecret))
 
-  // Auth routes (no auth required)
-  app.route('/', createEmailAuthRoutes(userStore, config.sessionSecret))
+  // Auth routes (public)
+  app.route('/', createEmailPublicAuthRoutes(userStore, config.sessionSecret))
   if (config.githubClientId && config.githubClientSecret) {
     const callbackUrl = `http://localhost:${config.port}/auth/github/callback`
     app.route('/', createGithubAuthRoutes(
@@ -106,6 +103,10 @@ if (config.authServer) {
       '/',
     ))
   }
+
+  // Auth routes (protected)
+  app.use('/auth/*', authMiddleware(config.sessionSecret))
+  app.route('/', createEmailProtectedAuthRoutes(userStore))
 
   // Auth middleware for API routes
   app.use('/api/*', authMiddleware(config.sessionSecret))

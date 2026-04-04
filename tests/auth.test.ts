@@ -5,7 +5,7 @@ import { sign } from 'cookie-signature'
 import bcrypt from 'bcrypt'
 import { initDb } from '../src/db.js'
 import { UserStore } from '../src/stores/user-store.js'
-import { createEmailAuthRoutes } from '../src/auth/email.js'
+import { createEmailProtectedAuthRoutes, createEmailPublicAuthRoutes } from '../src/auth/email.js'
 
 describe('authMiddleware', () => {
   const SECRET = 'a'.repeat(32)
@@ -87,10 +87,9 @@ describe('email auth routes', () => {
     })
 
     app = new Hono()
-    app.use('/auth/change-password', authMiddleware(SECRET))
-    app.use('/auth/me', authMiddleware(SECRET))
-    app.use('/auth/logout', authMiddleware(SECRET))
-    app.route('/', createEmailAuthRoutes(userStore, SECRET))
+    app.route('/', createEmailPublicAuthRoutes(userStore, SECRET))
+    app.use('/auth/*', authMiddleware(SECRET))
+    app.route('/', createEmailProtectedAuthRoutes(userStore))
   })
 
   it('should return current user with /auth/me', async () => {
