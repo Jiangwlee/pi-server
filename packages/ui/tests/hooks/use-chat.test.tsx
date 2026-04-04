@@ -66,10 +66,20 @@ describe('parseContent', () => {
     expect(parseContent(raw)).toEqual(raw)
   })
 
-  it('filters out unknown/image types', () => {
+  it('parses ImageContent blocks', () => {
     const raw = [
       { type: 'text', text: 'ok' },
-      { type: 'image', data: 'base64', mimeType: 'image/png' },
+      { type: 'image', data: 'base64data', mimeType: 'image/png' },
+    ]
+    expect(parseContent(raw)).toEqual([
+      { type: 'text', text: 'ok' },
+      { type: 'image', data: 'base64data', mimeType: 'image/png' },
+    ])
+  })
+
+  it('filters out unknown types', () => {
+    const raw = [
+      { type: 'text', text: 'ok' },
       { type: 'unknown', foo: 'bar' },
     ]
     expect(parseContent(raw)).toEqual([{ type: 'text', text: 'ok' }])
@@ -186,6 +196,36 @@ describe('applyDelta', () => {
     const result = applyDelta(content, { type: 'text_delta', contentIndex: 2, delta: 'hi', partial: {} })
     expect(result).toHaveLength(3)
     expect(result[2]).toEqual({ type: 'text', text: 'hi' })
+  })
+
+  it('returns original content for negative contentIndex', () => {
+    const content: ContentBlock[] = [{ type: 'text', text: 'hello' }]
+    const result = applyDelta(content, { type: 'text_delta', contentIndex: -1, delta: 'bad', partial: {} } as AssistantMessageEvent)
+    expect(result).toEqual(content)
+  })
+
+  it('returns original content for NaN contentIndex', () => {
+    const content: ContentBlock[] = [{ type: 'text', text: 'hello' }]
+    const result = applyDelta(content, { type: 'text_delta', contentIndex: NaN, delta: 'bad', partial: {} } as AssistantMessageEvent)
+    expect(result).toEqual(content)
+  })
+
+  it('returns original content for non-integer contentIndex', () => {
+    const content: ContentBlock[] = [{ type: 'text', text: 'hello' }]
+    const result = applyDelta(content, { type: 'text_delta', contentIndex: 1.5, delta: 'bad', partial: {} } as AssistantMessageEvent)
+    expect(result).toEqual(content)
+  })
+
+  it('toolcall_delta ensures placeholder ToolCall exists', () => {
+    const content: ContentBlock[] = []
+    const result = applyDelta(content, { type: 'toolcall_delta', contentIndex: 0, delta: '{"path":', partial: {} })
+    expect(result[0]).toEqual({ type: 'toolCall', id: '', name: '', arguments: {} })
+  })
+
+  it('toolcall_delta preserves existing ToolCall', () => {
+    const content: ContentBlock[] = [{ type: 'toolCall', id: 'tc1', name: 'read', arguments: {} }]
+    const result = applyDelta(content, { type: 'toolcall_delta', contentIndex: 0, delta: '...', partial: {} })
+    expect(result[0]).toEqual({ type: 'toolCall', id: 'tc1', name: 'read', arguments: {} })
   })
 })
 
@@ -454,6 +494,130 @@ describe('useChat', () => {
       const assistantMsg = result.current.messages.find((m) => m.role === 'assistant')
       expect(assistantMsg).toBeDefined()
       expect(assistantMsg!.content).toEqual([{ type: 'text', text: 'world' }])
+    })
+  })
+
+  it('SSE message_update with done finalizes message with usage', async () => {
+    const { client } = makeClient()
+    const sse = makeConnect()
+    const { result } = renderHook(() => useChat({ sessionId: 's1', client, connect: sse.connect }))
+
+    await waitFor(() => expect(result.current.status).toBe('idle'))
+
+    act(() => {
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+    })
+
+    await waitFor(() => {
+      expect(result.current.messages.some((m) => m.streaming)).toBe(true)
+    })
+
+    act(() => {
+      sse.emitEvent({
+        event: 'pi',
+        data: {
+          type: 'message_update',
+          message: {},
+          assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: 'answer', partial: {} },
+        },
+      })
+    })
+
+    const usage = { input: 10, output: 20, cacheRead: 0, cacheWrite: 0, totalTokens: 30, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } }
+    act(() => {
+      sse.emitEvent({
+        event: 'pi',
+        data: {
+          type: 'message_update',
+          message: {},
+          assistantMessageEvent: {
+            type: 'done',
+            reason: 'stop',
+            message: {
+              content: [{ type: 'text', text: 'answer' }],
+              usage,
+              stopReason: 'stop',
+              model: 'test-model',
+            },
+          },
+        },
+      })
+    })
+
+    await waitFor(() => {
+      const msg = result.current.messages.find((m) => m.role === 'assistant')
+      expect(msg!.streaming).toBe(false)
+      expect(msg!.usage).toEqual(usage)
+      expect(msg!.stopReason).toBe('stop')
+      expect(msg!.model).toBe('test-model')
+    })
+  })
+
+  it('SSE message_update with error finalizes message', async () => {
+    const { client } = makeClient()
+    const sse = makeConnect()
+    const { result } = renderHook(() => useChat({ sessionId: 's1', client, connect: sse.connect }))
+
+    await waitFor(() => expect(result.current.status).toBe('idle'))
+
+    act(() => {
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+    })
+
+    await waitFor(() => {
+      expect(result.current.messages.some((m) => m.streaming)).toBe(true)
+    })
+
+    act(() => {
+      sse.emitEvent({
+        event: 'pi',
+        data: {
+          type: 'message_update',
+          message: {},
+          assistantMessageEvent: {
+            type: 'error',
+            reason: 'aborted',
+            error: { stopReason: 'aborted' },
+          },
+        },
+      })
+    })
+
+    await waitFor(() => {
+      const msg = result.current.messages.find((m) => m.role === 'assistant')
+      expect(msg!.streaming).toBe(false)
+      expect(msg!.stopReason).toBe('aborted')
+    })
+  })
+
+  it('duplicate message_start finalizes previous streaming message', async () => {
+    const { client } = makeClient()
+    const sse = makeConnect()
+    const { result } = renderHook(() => useChat({ sessionId: 's1', client, connect: sse.connect }))
+
+    await waitFor(() => expect(result.current.status).toBe('idle'))
+
+    // First message_start
+    act(() => {
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+    })
+
+    await waitFor(() => {
+      expect(result.current.messages.filter((m) => m.streaming)).toHaveLength(1)
+    })
+
+    // Second message_start without message_end — should finalize the first
+    act(() => {
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+    })
+
+    await waitFor(() => {
+      const assistantMsgs = result.current.messages.filter((m) => m.role === 'assistant')
+      expect(assistantMsgs).toHaveLength(2)
+      // First should be finalized
+      expect(assistantMsgs[0].streaming).toBe(false)
+      // Second should be streaming
+      expect(assistantMsgs[1].streaming).toBe(true)
     })
   })
 

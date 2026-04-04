@@ -53,7 +53,7 @@ export type ToolCall = {
   arguments: Record<string, unknown>
 }
 
-export type ContentBlock = TextContent | ThinkingContent | ToolCall
+export type ContentBlock = TextContent | ThinkingContent | ToolCall | ImageContent
 
 // --- Metadata types ---
 

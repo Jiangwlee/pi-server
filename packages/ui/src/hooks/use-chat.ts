@@ -10,6 +10,7 @@ import type {
   AssistantMessageEvent,
   ChatMessage,
   ContentBlock,
+  ImageContent,
   SessionHistoryEntry,
   SessionStatus,
   TextContent,
@@ -91,8 +92,11 @@ function parseContent(raw: unknown): ContentBlock[] {
             name: String(tc.name),
             arguments: tc.arguments ?? {},
           })
+        } else if (t.type === 'image' && 'data' in item && 'mimeType' in item) {
+          const ic = item as ImageContent
+          blocks.push({ type: 'image', data: String(ic.data), mimeType: String(ic.mimeType) })
         }
-        // skip ImageContent and unknown types — they're not in ContentBlock
+        // skip unknown types
       }
     }
     return blocks
@@ -139,29 +143,46 @@ function defaultConnect(basePath: string): ChatSSEConnect {
  * Apply an AssistantMessageEvent delta to a ChatMessage's content array.
  * Returns a new content array (immutable update).
  */
+function isValidIndex(idx: unknown): idx is number {
+  return typeof idx === 'number' && Number.isInteger(idx) && idx >= 0
+}
+
+function ensureLength(arr: ContentBlock[], idx: number): void {
+  while (arr.length <= idx) arr.push({ type: 'text', text: '' })
+}
+
 function applyDelta(
   content: ContentBlock[],
   evt: AssistantMessageEvent,
 ): ContentBlock[] {
+  if ('contentIndex' in evt && !isValidIndex(evt.contentIndex)) return content
+
   const next = content.slice()
 
   switch (evt.type) {
+    case 'text_start': {
+      const idx = evt.contentIndex
+      ensureLength(next, idx)
+      if (next[idx].type !== 'text') {
+        next[idx] = { type: 'text', text: '' }
+      }
+      break
+    }
     case 'text_delta': {
       const idx = evt.contentIndex
       if (idx < next.length && next[idx].type === 'text') {
         next[idx] = { ...next[idx] as TextContent, text: (next[idx] as TextContent).text + evt.delta }
       } else {
-        // Ensure array is long enough
-        while (next.length <= idx) next.push({ type: 'text', text: '' })
+        ensureLength(next, idx)
         next[idx] = { type: 'text', text: evt.delta }
       }
       break
     }
-    case 'text_start': {
+    case 'thinking_start': {
       const idx = evt.contentIndex
-      while (next.length <= idx) next.push({ type: 'text', text: '' })
-      if (next[idx].type !== 'text') {
-        next[idx] = { type: 'text', text: '' }
+      ensureLength(next, idx)
+      if (next[idx].type !== 'thinking') {
+        next[idx] = { type: 'thinking', thinking: '' }
       }
       break
     }
@@ -170,28 +191,29 @@ function applyDelta(
       if (idx < next.length && next[idx].type === 'thinking') {
         next[idx] = { ...next[idx] as ThinkingContent, thinking: (next[idx] as ThinkingContent).thinking + evt.delta }
       } else {
-        while (next.length <= idx) next.push({ type: 'text', text: '' })
+        ensureLength(next, idx)
         next[idx] = { type: 'thinking', thinking: evt.delta }
-      }
-      break
-    }
-    case 'thinking_start': {
-      const idx = evt.contentIndex
-      while (next.length <= idx) next.push({ type: 'text', text: '' })
-      if (next[idx].type !== 'thinking') {
-        next[idx] = { type: 'thinking', thinking: '' }
       }
       break
     }
     case 'toolcall_start': {
       const idx = evt.contentIndex
-      while (next.length <= idx) next.push({ type: 'text', text: '' })
+      ensureLength(next, idx)
       next[idx] = { type: 'toolCall', id: '', name: '', arguments: {} }
+      break
+    }
+    case 'toolcall_delta': {
+      // Accumulate partial JSON for tool arguments — ensure placeholder exists
+      const idx = evt.contentIndex
+      if (idx >= next.length || next[idx].type !== 'toolCall') {
+        ensureLength(next, idx)
+        next[idx] = { type: 'toolCall', id: '', name: '', arguments: {} }
+      }
       break
     }
     case 'toolcall_end': {
       const idx = evt.contentIndex
-      while (next.length <= idx) next.push({ type: 'text', text: '' })
+      ensureLength(next, idx)
       next[idx] = evt.toolCall
       break
     }
@@ -262,16 +284,28 @@ export function useChat(options: UseChatOptions): UseChatResult {
 
             case 'message_start': {
               const msgId = 'stream-' + Date.now()
+              const prevStreamId = streamMsgRef.current
               streamMsgRef.current = msgId
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: msgId,
-                  role: 'assistant',
-                  content: [],
-                  streaming: true,
-                },
-              ])
+              setMessages((prev) => {
+                // Finalize any stale streaming message from a previous message_start
+                let cleaned = prev
+                if (prevStreamId) {
+                  const staleIdx = cleaned.findIndex((m) => m.id === prevStreamId && m.streaming)
+                  if (staleIdx !== -1) {
+                    cleaned = cleaned.slice()
+                    cleaned[staleIdx] = { ...cleaned[staleIdx], streaming: false }
+                  }
+                }
+                return [
+                  ...cleaned,
+                  {
+                    id: msgId,
+                    role: 'assistant',
+                    content: [],
+                    streaming: true,
+                  },
+                ]
+              })
               break
             }
 
