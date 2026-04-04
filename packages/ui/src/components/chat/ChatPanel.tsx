@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useChat } from '../../hooks/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
+import type { Model } from '../../client/types.js'
 import { ChatInput } from './ChatInput.js'
 import { ChatSendButton } from './ChatSendButton.js'
 import { MessageList } from './MessageList.js'
@@ -18,6 +19,17 @@ type ChatPanelClassNames = {
   textarea?: string
   modelSelect?: string
   sendButton?: string
+}
+
+export function getModelOptionValue(model: Model): string {
+  if (model.provider) return `${model.provider}:${model.id}`
+  return model.id
+}
+
+export function getModelOptionLabel(model: Model): string {
+  const display = model.name ?? model.id
+  if (model.provider) return `${model.provider} / ${display}`
+  return display
 }
 
 export function ChatPanel(
@@ -44,16 +56,16 @@ export function ChatPanel(
 
   useEffect(() => {
     if (!selectedModelId && models.length > 0) {
-      setSelectedModelId(models[0].id)
+      setSelectedModelId(getModelOptionValue(models[0]))
     }
   }, [models, selectedModelId])
 
   const handleSend = useCallback(() => {
     const trimmed = inputValue.trim()
     if (!trimmed) return
-    void send(trimmed)
+    void send(trimmed, selectedModelId ? { model: selectedModelId } : undefined)
     setInputValue('')
-  }, [inputValue, send])
+  }, [inputValue, selectedModelId, send])
 
   const handleStop = useCallback(() => {
     void abort()
@@ -89,8 +101,8 @@ export function ChatPanel(
               onChange={(event) => setSelectedModelId(event.target.value)}
             >
               {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name ?? model.id}
+                <option key={getModelOptionValue(model)} value={getModelOptionValue(model)}>
+                  {getModelOptionLabel(model)}
                 </option>
               ))}
             </select>

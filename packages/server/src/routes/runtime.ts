@@ -16,6 +16,16 @@ export function createRuntimeRoutes(
 ): Hono {
   const app = new Hono()
 
+  function parseModelRef(raw: string | undefined): { provider: string; modelId: string } | undefined {
+    if (!raw) return undefined
+    const idx = raw.indexOf(':')
+    if (idx <= 0 || idx === raw.length - 1) return undefined
+    const provider = raw.slice(0, idx).trim()
+    const modelId = raw.slice(idx + 1).trim()
+    if (!provider || !modelId) return undefined
+    return { provider, modelId }
+  }
+
   function getOwnedSession(userId: string, sessionId: string) {
     return sessionStore.findById(sessionId, userId)
   }
@@ -23,10 +33,14 @@ export function createRuntimeRoutes(
   app.post('/api/sessions/:id/send', async (c) => {
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
-    const body = await c.req.json<{ message: string }>()
+    const body = await c.req.json<{ message: string; model?: string }>()
 
     if (!body.message || !body.message.trim()) {
       return c.json({ error: 'message is required' }, 400)
+    }
+    const model = parseModelRef(body.model)
+    if (body.model !== undefined && !model) {
+      return c.json({ error: 'model must be in provider:modelId format' }, 400)
     }
 
     const session = getOwnedSession(userId, sessionId)
@@ -40,7 +54,7 @@ export function createRuntimeRoutes(
 
     try {
       // Fire and forget — client listens via SSE
-      registry.send(sessionId, userId, sessionPath, workspacePath, body.message)
+      registry.send(sessionId, userId, sessionPath, workspacePath, body.message, model)
         .catch((err) => {
           logger.error('runtime.send_async_failed', withError({
             requestId: c.get('requestId'),

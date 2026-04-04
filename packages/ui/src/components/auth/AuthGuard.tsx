@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/use-auth.js'
 
 export function AuthGuard(
@@ -18,24 +18,21 @@ export function AuthGuard(
 ): React.JSX.Element | null {
   const { user, loading, error, checkAuth } = useAuth()
   const [checked, setChecked] = useState(!requireCheck)
-  const checkingRef = useRef(false)
 
   useEffect(() => {
-    if (!requireCheck || checked || user || checkingRef.current) return
-    checkingRef.current = true
+    if (!requireCheck || checked || user) return
     let cancelled = false
     checkAuth()
       .catch(() => {})
       .finally(() => {
         if (!cancelled) setChecked(true)
-        checkingRef.current = false
       })
     return () => {
       cancelled = true
     }
   }, [checkAuth, checked, requireCheck, user])
 
-  if (!checked || loading) return loadingFallback as React.JSX.Element | null
+  if ((!checked && !user) || loading) return loadingFallback as React.JSX.Element | null
   if (error && !user) return (errorFallback ?? unauthenticatedFallback) as React.JSX.Element | null
   if (!user) return unauthenticatedFallback as React.JSX.Element | null
   return <>{children}</>

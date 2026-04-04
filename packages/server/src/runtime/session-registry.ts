@@ -12,6 +12,7 @@ export type SSEClientHandler = (envelope: SSEEnvelope) => void
 
 export type SdkSession = {
   prompt: (text: string) => Promise<void>
+  setModel: (provider: string, modelId: string) => Promise<void>
   abort: () => Promise<void>
   subscribe: (listener: (event: unknown) => void) => () => void
   dispose: () => void
@@ -72,6 +73,7 @@ export class SessionRegistry {
     sessionPath: string,
     cwd: string,
     message: string,
+    model?: { provider: string; modelId: string },
   ): Promise<void> {
     const entry = this.getOrCreateEntry(sessionId)
 
@@ -97,7 +99,7 @@ export class SessionRegistry {
     this.logger.info('session.send_started', { sessionId, userId })
     this.broadcast(entry, 'status', { status: 'running' })
 
-    return this.runSend(entry, sessionId, sessionPath, cwd, message)
+    return this.runSend(entry, sessionId, sessionPath, cwd, message, model)
   }
 
   private async runSend(
@@ -106,7 +108,14 @@ export class SessionRegistry {
     sessionPath: string,
     cwd: string,
     message: string,
+    model?: { provider: string; modelId: string },
   ): Promise<void> {
+    const promptStartedAt = Date.now()
+    let sdkEventCount = 0
+    let firstSdkEventType: string | null = null
+    let lastSdkEventType: string | null = null
+    let progressTimer: ReturnType<typeof setInterval> | null = null
+
     let timedOut = false
     const timeoutMs = this.options.promptTimeoutMs ?? 15 * 60 * 1000
     entry.timer = setTimeout(() => {
@@ -125,16 +134,100 @@ export class SessionRegistry {
     try {
       // Create SDK session if needed
       if (!entry.sdkSession) {
+        this.logger.info('session.create_agent_session_started', {
+          sessionId,
+          userId: entry.userId,
+          sessionPath,
+          cwd,
+        })
         entry.sdkSession = await this.options.createSession(sessionPath, cwd)
+        this.logger.info('session.create_agent_session_completed', {
+          sessionId,
+          userId: entry.userId,
+          sessionPath,
+          cwd,
+        })
         entry.unsubscribe = entry.sdkSession.subscribe((event: unknown) => {
+          sdkEventCount += 1
+          const eventType =
+            event && typeof event === 'object' && 'type' in event && typeof (event as { type?: unknown }).type === 'string'
+              ? (event as { type: string }).type
+              : 'unknown'
+          lastSdkEventType = eventType
+          if (!firstSdkEventType) {
+            firstSdkEventType = eventType
+            this.logger.info('session.sdk_first_event_received', {
+              sessionId,
+              userId: entry.userId,
+              eventType,
+              elapsedMs: Date.now() - promptStartedAt,
+            })
+          }
+          if (eventType === 'message_end') {
+            const payload = event as {
+              message?: {
+                stopReason?: string
+                errorMessage?: string
+                model?: string
+                provider?: string
+              }
+            }
+            this.logger.info('session.sdk_message_end', {
+              sessionId,
+              userId: entry.userId,
+              stopReason: payload.message?.stopReason ?? null,
+              errorMessage: payload.message?.errorMessage ?? null,
+              model: payload.message?.model ?? null,
+              provider: payload.message?.provider ?? null,
+            })
+          }
           this.broadcast(entry!, 'pi', event)
         })
       }
 
+      if (model) {
+        this.logger.info('session.set_model_started', {
+          sessionId,
+          userId: entry.userId,
+          provider: model.provider,
+          modelId: model.modelId,
+        })
+        await entry.sdkSession.setModel(model.provider, model.modelId)
+        this.logger.info('session.set_model_completed', {
+          sessionId,
+          userId: entry.userId,
+          provider: model.provider,
+          modelId: model.modelId,
+        })
+      }
+
+      this.logger.info('session.prompt_started', {
+        sessionId,
+        userId: entry.userId,
+        messageLength: message.length,
+      })
+      progressTimer = setInterval(() => {
+        this.logger.info('session.prompt_in_progress', {
+          sessionId,
+          userId: entry.userId,
+          elapsedMs: Date.now() - promptStartedAt,
+          sdkEventCount,
+          firstSdkEventType,
+          lastSdkEventType,
+        })
+      }, 10_000)
       await entry.sdkSession.prompt(message)
       if (timedOut || entry.status === 'error') {
         return
       }
+      this.logger.info('session.prompt_completed', {
+        sessionId,
+        userId: entry.userId,
+        elapsedMs: Date.now() - promptStartedAt,
+        sdkEventCount,
+        firstSdkEventType,
+        lastSdkEventType,
+      })
       entry.status = 'idle'
       this.broadcast(entry, 'status', { status: 'idle' })
       this.logger.info('session.send_completed', {
@@ -150,6 +243,15 @@ export class SessionRegistry {
       }
       entry.status = 'error'
       const errorMsg = err instanceof Error ? err.message : String(err)
+      this.logger.error('session.prompt_failed', {
+        sessionId,
+        userId: entry.userId,
+        elapsedMs: Date.now() - promptStartedAt,
+        sdkEventCount,
+        firstSdkEventType,
+        lastSdkEventType,
+        errorMessage: errorMsg,
+      })
       this.broadcast(entry, 'error', { code: 'PROMPT_ERROR', message: errorMsg })
       this.broadcast(entry, 'status', { status: 'error' })
       this.logger.error('session.send_failed', withError({
@@ -159,6 +261,10 @@ export class SessionRegistry {
         cwd,
       }, err))
     } finally {
+      if (progressTimer) {
+        clearInterval(progressTimer)
+        progressTimer = null
+      }
       if (entry.timer) {
         clearTimeout(entry.timer)
         entry.timer = null

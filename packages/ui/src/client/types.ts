@@ -17,6 +17,7 @@ export type Session = {
 export type Model = {
   id: string
   name?: string
+  provider?: string
 }
 
 export type LoginRequest = {
@@ -32,6 +33,7 @@ export type CreateSessionRequest = {
 
 export type SendRequest = {
   message: string
+  model?: string
 }
 
 export type SessionStatus = 'idle' | 'running' | 'error'

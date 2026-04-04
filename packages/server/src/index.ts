@@ -82,6 +82,7 @@ if (config.authServer) {
   // Session Registry with real SDK factory
   const registry = new SessionRegistry({
     createSession: async (sessionPath: string, cwd: string) => {
+      logger.info('sdk.create_agent_session_started', { sessionPath, cwd })
       const authStorage = piProvider.getAuthStorage()
       const modelRegistry = piProvider.getModelRegistry()
       const tools = createCodingTools(cwd)
@@ -91,7 +92,20 @@ if (config.authServer) {
         tools,
         sessionManager: SessionManager.open(sessionPath),
       })
-      return session
+      logger.info('sdk.create_agent_session_completed', { sessionPath, cwd })
+      return {
+        prompt: (text: string) => session.prompt(text),
+        setModel: async (provider: string, modelId: string) => {
+          const model = modelRegistry.find(provider, modelId)
+          if (!model) {
+            throw new Error(`Model not found: ${provider}:${modelId}`)
+          }
+          await session.setModel(model)
+        },
+        abort: () => session.abort(),
+        subscribe: (listener: (event: unknown) => void) => session.subscribe(listener),
+        dispose: () => session.dispose(),
+      }
     },
     ringBufferSize: config.sseRingBufferSize,
     maxConcurrentPerUser: config.maxConcurrentSessionsPerUser,
