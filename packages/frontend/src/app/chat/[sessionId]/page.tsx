@@ -19,6 +19,7 @@ export default function SessionPage() {
           messageAssistant: 'text-zinc-700',
           messageTool: 'text-zinc-600',
           composer: 'flex items-center gap-2 border-t border-zinc-200 pt-3',
+          modelSelect: 'rounded border border-zinc-300 px-2 py-2 text-sm',
           input: 'flex-1 rounded border border-zinc-300 px-3 py-2',
           sendButton: 'rounded border px-3 py-2 text-sm',
           abortButton: 'rounded border border-red-300 px-3 py-2 text-sm text-red-700',

@@ -166,10 +166,11 @@ export function useChat(options: UseChatOptions): UseChatResult {
   const send = useCallback(async (message: string): Promise<void> => {
     const text = message.trim()
     if (!text) return
+    const optimisticId = 'local-user-' + Date.now()
     setError(null)
     setStatus('running')
     setMessages((prev) => [...prev, {
-      id: 'local-user-' + Date.now(),
+      id: optimisticId,
       role: 'user',
       content: text,
     }])
@@ -178,6 +179,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
       await client.send(sessionId, { message: text })
     } catch (err) {
       setStatus('error')
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
       if (err instanceof ApiError && err.status === 409) {
         setError('Session is busy')
         return

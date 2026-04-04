@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseSSEStream } from '../../src/client/sse-client.js'
+import { consumeSSEBuffer, parseSSEStream } from '../../src/client/sse-client.js'
 
 describe('parseSSEStream', () => {
   it('parses event/data/id frames', () => {
@@ -18,5 +18,16 @@ describe('parseSSEStream', () => {
     expect(frames[0]?.event).toBe('message')
     expect(frames[0]?.id).toBe('2')
     expect(frames[0]?.data).toEqual({ x: 1 })
+  })
+
+  it('joins multiline data with newline', () => {
+    const frames = parseSSEStream('event: pi\ndata: hello\ndata: world\n\n')
+    expect(frames[0]?.data).toBe('hello\nworld')
+  })
+
+  it('keeps trailing partial chunk as rest', () => {
+    const parsed = consumeSSEBuffer('event: status\ndata: {"status":"idle"}\n\nid: 2\nda')
+    expect(parsed.frames).toHaveLength(1)
+    expect(parsed.rest).toBe('id: 2\nda')
   })
 })

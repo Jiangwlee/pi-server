@@ -1,10 +1,22 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { LoginForm } from '@pi-server/ui'
+import { LoginForm, useAuth } from '@pi-server/ui'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { user, checkAuth } = useAuth()
+
+  useEffect(() => {
+    void checkAuth().catch(() => {})
+  }, [checkAuth])
+
+  useEffect(() => {
+    if (user) {
+      router.replace('/chat')
+    }
+  }, [router, user])
 
   return (
     <main className="mx-auto max-w-md p-8">

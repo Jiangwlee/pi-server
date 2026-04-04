@@ -17,7 +17,11 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
   const selectedSessionId = pathname.startsWith('/chat/') ? pathname.split('/')[2] : undefined
 
   return (
-    <AuthGuard unauthenticatedFallback={<div className="p-8">Please login first.</div>}>
+    <AuthGuard
+      loadingFallback={<div className="p-8 text-zinc-500">Checking authentication...</div>}
+      unauthenticatedFallback={<UnauthenticatedRedirect />}
+      errorFallback={<div className="p-8 text-red-600">Authentication failed. Please login again.</div>}
+    >
       <main className="grid min-h-screen grid-cols-[280px_1fr]">
         <SessionList
           sessions={sessions}
@@ -53,4 +57,12 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
       </main>
     </AuthGuard>
   )
+}
+
+function UnauthenticatedRedirect() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/login')
+  }, [router])
+  return <div className="p-8 text-zinc-500">Redirecting to login...</div>
 }

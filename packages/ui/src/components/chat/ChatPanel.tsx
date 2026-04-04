@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useChat } from '../../hooks/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
 import { ChatInput } from './ChatInput.js'
@@ -15,6 +15,7 @@ type ChatPanelClassNames = {
   messageAssistant?: string
   messageTool?: string
   input?: string
+  modelSelect?: string
   sendButton?: string
   abortButton?: string
 }
@@ -32,10 +33,17 @@ export function ChatPanel(
 ) {
   const { messages, status, error, send, abort } = useChat({ sessionId })
   const { models, loadModels } = useModels()
+  const [selectedModelId, setSelectedModelId] = useState<string>('')
 
   useEffect(() => {
     void loadModels()
   }, [loadModels])
+
+  useEffect(() => {
+    if (!selectedModelId && models.length > 0) {
+      setSelectedModelId(models[0].id)
+    }
+  }, [models, selectedModelId])
 
   return (
     <section className={[classNames?.root, className].filter(Boolean).join(' ')}>
@@ -54,11 +62,15 @@ export function ChatPanel(
       />
       <ChatInput
         status={status}
+        models={models}
+        selectedModelId={selectedModelId}
+        onModelChange={setSelectedModelId}
         onSend={send}
         onAbort={abort}
         className={classNames?.composer}
         classNames={{
           input: classNames?.input,
+          modelSelect: classNames?.modelSelect,
           sendButton: classNames?.sendButton,
           abortButton: classNames?.abortButton,
         }}
@@ -66,6 +78,7 @@ export function ChatPanel(
       <footer className={classNames?.footer}>
         <span>Status: {status}</span>
         <span>Models: {models.length}</span>
+        {selectedModelId ? <span>Selected: {selectedModelId}</span> : null}
         {error ? <span>Error: {error}</span> : null}
       </footer>
     </section>
