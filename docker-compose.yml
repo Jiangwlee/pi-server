@@ -10,6 +10,7 @@ services:
       PORT: 3001
       AUTH_SERVER_TOKEN: ${AUTH_SERVER_TOKEN}
       TZ: ${TZ:-Asia/Shanghai}
+      NODE_USE_ENV_PROXY: "1"
     ports:
       - "3001:3001"
     volumes:
@@ -31,6 +32,7 @@ services:
       HTTP_PROXY: http://host.docker.internal:10801
       HTTPS_PROXY: http://host.docker.internal:10801
       NO_PROXY: localhost,127.0.0.1,auth-server,pi-server
+      NODE_USE_ENV_PROXY: "1"
       TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test-user@gmail.com}
       TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-test-pass-123}
       TEST_USER_LOGIN: ${TEST_USER_LOGIN:-test-user}

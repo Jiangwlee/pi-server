@@ -33,11 +33,14 @@ RUN npm config set registry https://registry.npmmirror.com
 ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 ENV PIP_TRUSTED_HOST=mirrors.aliyun.com
 
-COPY . /app
+COPY package.json package-lock.json /app/
 
 RUN npm config set loglevel verbose \
-  && npm ci --verbose \
-  && npm run build --verbose
+  && npm ci --verbose
+
+COPY . /app
+
+RUN npm run build --verbose
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

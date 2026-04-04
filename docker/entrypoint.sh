@@ -5,7 +5,7 @@ ROLE="${PI_ROLE:-pi-server}"
 PORT="${PORT:-3000}"
 
 if [ "$ROLE" = "auth-server" ]; then
-  exec node dist/index.js --auth-server
+  exec node --use-env-proxy dist/index.js --auth-server
 fi
 
 TEST_USER_EMAIL="${TEST_USER_EMAIL:-test-user@gmail.com}"
@@ -17,4 +17,4 @@ node dist/cli.js add-user \
   --password "$TEST_USER_PASSWORD" \
   --login "$TEST_USER_LOGIN" >/tmp/add-user.log 2>&1 || true
 
-exec node dist/index.js --auth-proxy-url "${AUTH_PROXY_URL:-http://auth-server:3001}" --auth-proxy-token "${AUTH_PROXY_TOKEN:-change-me}"
+exec node --use-env-proxy dist/index.js --auth-proxy-url "${AUTH_PROXY_URL:-http://auth-server:3001}" --auth-proxy-token "${AUTH_PROXY_TOKEN:-change-me}"
