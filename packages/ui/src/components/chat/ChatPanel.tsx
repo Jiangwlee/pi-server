@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useChat } from '../../hooks/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
 import { ChatInput } from './ChatInput.js'
+import { ChatSendButton } from './ChatSendButton.js'
 import { MessageList } from './MessageList.js'
 
 type ChatPanelClassNames = {
@@ -14,10 +15,9 @@ type ChatPanelClassNames = {
   messageUser?: string
   messageAssistant?: string
   messageTool?: string
-  input?: string
+  textarea?: string
   modelSelect?: string
   sendButton?: string
-  abortButton?: string
 }
 
 export function ChatPanel(
@@ -34,6 +34,9 @@ export function ChatPanel(
   const { messages, status, error, send, abort } = useChat({ sessionId })
   const { models, loadModels } = useModels()
   const [selectedModelId, setSelectedModelId] = useState<string>('')
+  const [inputValue, setInputValue] = useState('')
+
+  const isLoading = status === 'running'
 
   useEffect(() => {
     void loadModels()
@@ -44,6 +47,17 @@ export function ChatPanel(
       setSelectedModelId(models[0].id)
     }
   }, [models, selectedModelId])
+
+  const handleSend = useCallback(() => {
+    const trimmed = inputValue.trim()
+    if (!trimmed) return
+    void send(trimmed)
+    setInputValue('')
+  }, [inputValue, send])
+
+  const handleStop = useCallback(() => {
+    void abort()
+  }, [abort])
 
   return (
     <section className={[classNames?.root, className].filter(Boolean).join(' ')}>
@@ -61,19 +75,35 @@ export function ChatPanel(
         }}
       />
       <ChatInput
-        status={status}
-        models={models}
-        selectedModelId={selectedModelId}
-        onModelChange={setSelectedModelId}
-        onSend={send}
-        onAbort={abort}
+        value={inputValue}
+        onInput={setInputValue}
+        onSend={handleSend}
+        loading={isLoading}
         className={classNames?.composer}
-        classNames={{
-          input: classNames?.input,
-          modelSelect: classNames?.modelSelect,
-          sendButton: classNames?.sendButton,
-          abortButton: classNames?.abortButton,
-        }}
+        classNames={{ textarea: classNames?.textarea }}
+        topAddons={
+          models.length > 0 ? (
+            <select
+              className={classNames?.modelSelect}
+              value={selectedModelId}
+              onChange={(event) => setSelectedModelId(event.target.value)}
+            >
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name ?? model.id}
+                </option>
+              ))}
+            </select>
+          ) : null
+        }
+        bottomAddons={
+          <ChatSendButton
+            loading={isLoading}
+            onSend={handleSend}
+            onStop={handleStop}
+            classNames={{ button: classNames?.sendButton }}
+          />
+        }
       />
       <footer className={classNames?.footer}>
         <span>Status: {status}</span>

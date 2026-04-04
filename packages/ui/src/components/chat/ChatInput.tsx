@@ -1,87 +1,117 @@
-import { useState } from 'react'
-import type { SessionStatus } from '../../client/types.js'
+import { memo, useCallback, useLayoutEffect, useRef } from 'react'
+import type { KeyboardEvent, ReactNode, Ref } from 'react'
 
-type ChatInputClassNames = {
+export type ChatInputClassNames = {
   root?: string
-  modelSelect?: string
-  input?: string
-  sendButton?: string
-  abortButton?: string
+  textarea?: string
+  topAddons?: string
+  bottomAddons?: string
 }
 
-export function ChatInput(
+export type ChatInputProps = {
+  value?: string
+  onInput?: (value: string) => void
+  onSend?: () => void
+  loading?: boolean
+  placeholder?: string
+  disabled?: boolean
+  className?: string
+  classNames?: ChatInputClassNames
+  topAddons?: ReactNode
+  bottomAddons?: ReactNode
+  minRows?: number
+  maxRows?: number
+  ref?: Ref<HTMLTextAreaElement>
+}
+
+export const ChatInput = memo(function ChatInput(
   {
-    status,
-    models,
-    selectedModelId,
-    onModelChange,
+    value,
+    onInput,
     onSend,
-    onAbort,
+    loading,
+    placeholder,
+    disabled,
     className,
     classNames,
-  }: {
-    status: SessionStatus
-    models?: Array<{ id: string; name?: string }>
-    selectedModelId?: string
-    onModelChange?: (modelId: string) => void
-    onSend: (message: string) => Promise<void>
-    onAbort: () => Promise<void>
-    className?: string
-    classNames?: ChatInputClassNames
-  },
+    topAddons,
+    bottomAddons,
+    minRows = 1,
+    maxRows = 6,
+    ref,
+  }: ChatInputProps,
 ) {
-  const [value, setValue] = useState('')
-  const running = status === 'running'
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const composingRef = useRef(false)
+
+  const setTextareaRef = useCallback((element: HTMLTextAreaElement | null) => {
+    textareaRef.current = element
+    if (!ref) return
+    if (typeof ref === 'function') {
+      ref(element)
+      return
+    }
+    ref.current = element
+  }, [ref])
+
+  const adjustHeight = useCallback(() => {
+    const element = textareaRef.current
+    if (!element) return
+    element.style.height = 'auto'
+    const lineHeight = 24
+    const minHeight = minRows * lineHeight
+    const maxHeight = maxRows * lineHeight
+    const nextHeight = Math.min(Math.max(element.scrollHeight, minHeight), maxHeight)
+    element.style.height = `${nextHeight}px`
+  }, [maxRows, minRows])
+
+  useLayoutEffect(() => {
+    adjustHeight()
+  }, [adjustHeight, value])
+
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter') return
+    if (event.shiftKey) return
+    if (composingRef.current) return
+    if (loading || disabled) return
+
+    event.preventDefault()
+    onSend?.()
+  }, [loading, disabled, onSend])
 
   return (
-    <form
+    <div
       className={[classNames?.root, className].filter(Boolean).join(' ')}
-      onSubmit={async (e) => {
-        e.preventDefault()
-        const text = value.trim()
-        if (!text) return
-        setValue('')
-        try {
-          await onSend(text)
-        } catch {
-          // useChat handles error state; keep submit handler rejection-free.
-        }
-      }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
     >
-      {models && models.length > 0 ? (
-        <select
-          className={classNames?.modelSelect}
-          value={selectedModelId}
-          onChange={(e) => onModelChange?.(e.target.value)}
-        >
-          {models.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name ?? model.id}
-            </option>
-          ))}
-        </select>
-      ) : null}
-      <input
-        className={classNames?.input}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Type a message"
+      {topAddons ? <div className={classNames?.topAddons}>{topAddons}</div> : null}
+
+      <textarea
+        ref={setTextareaRef}
+        className={classNames?.textarea}
+        value={value ?? ''}
+        onChange={(event) => { onInput?.(event.target.value) }}
+        onKeyDown={handleKeyDown}
+        onCompositionStart={() => { composingRef.current = true }}
+        onCompositionEnd={() => { composingRef.current = false }}
+        placeholder={placeholder}
+        disabled={disabled}
+        rows={minRows}
+        style={{
+          resize: 'none',
+          overflowY: 'auto',
+          lineHeight: 1.5,
+          width: '100%',
+          boxSizing: 'border-box',
+          border: 'none',
+          outline: 'none',
+          background: 'transparent',
+          font: 'inherit',
+          padding: '8px 12px',
+        }}
       />
-      {running ? (
-        <button
-          type="button"
-          className={classNames?.abortButton}
-          onClick={async () => {
-            await onAbort()
-          }}
-        >
-          Abort
-        </button>
-      ) : (
-        <button type="submit" className={classNames?.sendButton}>
-          Send
-        </button>
-      )}
-    </form>
+
+      {bottomAddons ? <div className={classNames?.bottomAddons}>{bottomAddons}</div> : null}
+    </div>
   )
-}
+})
