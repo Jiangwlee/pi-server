@@ -83,11 +83,15 @@ if (config.authServer) {
     },
     ringBufferSize: config.sseRingBufferSize,
     maxConcurrentPerUser: config.maxConcurrentSessionsPerUser,
+    promptTimeoutMs: 15 * 60 * 1000,
   })
 
   // Middleware
   app.use('*', cors())
   app.use('*', bodyLimit({ maxSize: config.bodyLimit }))
+  app.use('/auth/change-password', authMiddleware(config.sessionSecret))
+  app.use('/auth/me', authMiddleware(config.sessionSecret))
+  app.use('/auth/logout', authMiddleware(config.sessionSecret))
 
   // Auth routes (no auth required)
   app.route('/', createEmailAuthRoutes(userStore, config.sessionSecret))

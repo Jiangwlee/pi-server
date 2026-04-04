@@ -62,9 +62,9 @@ describe('SessionRegistry', () => {
 
     registry.send('sess-1', 'user-1', '/path/s.jsonl', '/ws', 'Hello') // starts running, never completes
 
-    await expect(
+    expect(() =>
       registry.send('sess-1', 'user-1', '/path/s.jsonl', '/ws', 'Again')
-    ).rejects.toThrow('Session is busy')
+    ).toThrow('Session is busy')
   })
 
   it('should enforce per-user concurrent session limit', async () => {
@@ -90,9 +90,9 @@ describe('SessionRegistry', () => {
     registry.send('s1', 'user-1', '/p1', '/w1', 'msg1')
     registry.send('s2', 'user-1', '/p2', '/w2', 'msg2')
 
-    await expect(
+    expect(() =>
       registry.send('s3', 'user-1', '/p3', '/w3', 'msg3')
-    ).rejects.toThrow('concurrent')
+    ).toThrow('concurrent')
   })
 
   it('should abort a running session', async () => {
@@ -190,6 +190,31 @@ describe('SessionRegistry', () => {
     expect(errorEvents.length).toBe(1)
   })
 
+  it('should abort and emit timeout error when prompt exceeds timeout', async () => {
+    vi.useFakeTimers()
+    const slowSession = createMockSdkSession()
+    slowSession.prompt = vi.fn().mockImplementation(() => new Promise(() => {}))
+
+    registry = new SessionRegistry({
+      createSession: vi.fn().mockResolvedValue(slowSession),
+      ringBufferSize: 200,
+      maxConcurrentPerUser: 3,
+      promptTimeoutMs: 100,
+    })
+
+    const events: SSEEnvelope[] = []
+    registry.subscribe('sess-1', (e) => events.push(e))
+    registry.send('sess-1', 'user-1', '/p', '/w', 'Hello')
+
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(registry.getStatus('sess-1')).toBe('error')
+    expect(slowSession.abort).toHaveBeenCalled()
+    const timeoutEvent = events.find((e) => e.event === 'error')
+    expect(timeoutEvent?.data).toContain('"code":"timeout"')
+    vi.useRealTimers()
+  })
+
   it('should dispose all sessions on dispose()', async () => {
     const sdkSession = createMockSdkSession()
     sdkSession.prompt = vi.fn().mockImplementation(() => new Promise(() => {}))
@@ -208,5 +233,6 @@ describe('SessionRegistry', () => {
 
     registry.dispose()
     expect(sdkSession.abort).toHaveBeenCalled()
+    expect(registry.getStatus('sess-1')).toBe('idle')
   })
 })

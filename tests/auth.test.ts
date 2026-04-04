@@ -2,6 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { Hono } from 'hono'
 import { authMiddleware, setAuthCookie, clearAuthCookie } from '../src/auth/middleware.js'
 import { sign } from 'cookie-signature'
+import bcrypt from 'bcrypt'
+import { initDb } from '../src/db.js'
+import { UserStore } from '../src/stores/user-store.js'
+import { createEmailAuthRoutes } from '../src/auth/email.js'
 
 describe('authMiddleware', () => {
   const SECRET = 'a'.repeat(32)
@@ -60,5 +64,84 @@ describe('authMiddleware', () => {
     const clearCookie = clearRes.headers.get('set-cookie')
     expect(clearCookie).toContain('pi_session=')
     expect(clearCookie).toContain('Max-Age=0')
+  })
+})
+
+describe('email auth routes', () => {
+  const SECRET = 'b'.repeat(32)
+  let app: Hono
+  let userStore: UserStore
+  let email = 'user@test.com'
+  let password = 'secret123'
+
+  beforeEach(async () => {
+    const db = initDb(':memory:')
+    userStore = new UserStore(db)
+    const hash = await bcrypt.hash(password, 10)
+    userStore.createUser({
+      email,
+      authProvider: 'email',
+      authProviderId: email,
+      displayName: 'tester',
+      passwordHash: hash,
+    })
+
+    app = new Hono()
+    app.use('/auth/change-password', authMiddleware(SECRET))
+    app.use('/auth/me', authMiddleware(SECRET))
+    app.use('/auth/logout', authMiddleware(SECRET))
+    app.route('/', createEmailAuthRoutes(userStore, SECRET))
+  })
+
+  it('should return current user with /auth/me', async () => {
+    const loginRes = await app.request('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    const cookie = loginRes.headers.get('set-cookie')!
+
+    const meRes = await app.request('/auth/me', {
+      headers: { Cookie: cookie },
+    })
+    expect(meRes.status).toBe(200)
+    const body = await meRes.json()
+    expect(body.email).toBe(email)
+    expect(body.authProvider).toBe('email')
+  })
+
+  it('should clear auth cookie with /auth/logout', async () => {
+    const signed = `s:${sign('user-abc', SECRET)}`
+    const res = await app.request('/auth/logout', {
+      method: 'POST',
+      headers: { Cookie: `pi_session=${encodeURIComponent(signed)}` },
+    })
+    expect(res.status).toBe(200)
+    const setCookie = res.headers.get('set-cookie')
+    expect(setCookie).toContain('pi_session=')
+    expect(setCookie).toContain('Max-Age=0')
+  })
+
+  it('should change password when authenticated', async () => {
+    const loginRes = await app.request('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    const cookie = loginRes.headers.get('set-cookie')!
+
+    const changeRes = await app.request('/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: JSON.stringify({ oldPassword: password, newPassword: 'new-secret' }),
+    })
+    expect(changeRes.status).toBe(200)
+
+    const relogin = await app.request('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: 'new-secret' }),
+    })
+    expect(relogin.status).toBe(200)
   })
 })

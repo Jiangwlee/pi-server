@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import bcrypt from 'bcrypt'
 import type { UserStore } from '../stores/user-store.js'
-import { setAuthCookie } from './middleware.js'
+import { clearAuthCookie, setAuthCookie } from './middleware.js'
 
 export function createEmailAuthRoutes(
   userStore: UserStore,
@@ -55,6 +55,25 @@ export function createEmailAuthRoutes(
 
     const newHash = await bcrypt.hash(body.newPassword, 10)
     userStore.updatePasswordHash(user.id, newHash)
+    return c.json({ ok: true })
+  })
+
+  app.get('/auth/me', (c) => {
+    const userId = c.get('userId')
+    const user = userStore.findById(userId)
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+    return c.json({
+      id: user.id,
+      email: user.email,
+      authProvider: user.authProvider,
+      displayName: user.displayName,
+    })
+  })
+
+  app.post('/auth/logout', (c) => {
+    clearAuthCookie(c)
     return c.json({ ok: true })
   })
 

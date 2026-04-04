@@ -13,12 +13,20 @@ export function createRuntimeRoutes(
 ): Hono {
   const app = new Hono()
 
+  function getOwnedSession(userId: string, sessionId: string) {
+    return sessionStore.findById(sessionId, userId)
+  }
+
   app.post('/api/sessions/:id/send', async (c) => {
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
     const body = await c.req.json<{ message: string }>()
 
-    const session = sessionStore.findById(sessionId, userId)
+    if (!body.message || !body.message.trim()) {
+      return c.json({ error: 'message is required' }, 400)
+    }
+
+    const session = getOwnedSession(userId, sessionId)
     if (!session) {
       return c.json({ error: 'Session not found' }, 404)
     }
@@ -44,13 +52,14 @@ export function createRuntimeRoutes(
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
 
-    const session = sessionStore.findById(sessionId, userId)
+    const session = getOwnedSession(userId, sessionId)
     if (!session) {
       return c.json({ error: 'Session not found' }, 404)
     }
 
     const lastEventId = c.req.header('Last-Event-ID')
-    const lastSeq = lastEventId ? parseInt(lastEventId, 10) : 0
+    const parsedSeq = lastEventId ? parseInt(lastEventId, 10) : 0
+    const lastSeq = Number.isFinite(parsedSeq) ? parsedSeq : 0
 
     return streamSSE(c, async (stream) => {
       // Replay from ring buffer
@@ -88,7 +97,7 @@ export function createRuntimeRoutes(
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
 
-    const session = sessionStore.findById(sessionId, userId)
+    const session = getOwnedSession(userId, sessionId)
     if (!session) {
       return c.json({ error: 'Session not found' }, 404)
     }
@@ -101,7 +110,7 @@ export function createRuntimeRoutes(
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
 
-    const session = sessionStore.findById(sessionId, userId)
+    const session = getOwnedSession(userId, sessionId)
     if (!session) {
       return c.json({ error: 'Session not found' }, 404)
     }
@@ -113,7 +122,7 @@ export function createRuntimeRoutes(
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
 
-    const session = sessionStore.findById(sessionId, userId)
+    const session = getOwnedSession(userId, sessionId)
     if (!session) {
       return c.json({ error: 'Session not found' }, 404)
     }
@@ -131,9 +140,9 @@ export function createRuntimeRoutes(
           entry.message?.role === 'assistant' ||
           entry.type === 'toolResult'
         )
-      return c.json(entries)
+      return c.json({ messages: entries })
     } catch {
-      return c.json([])
+      return c.json({ messages: [] })
     }
   })
 

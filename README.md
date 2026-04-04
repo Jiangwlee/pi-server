@@ -85,6 +85,8 @@ npx tsx src/index.ts --auth-proxy-url http://auth-host:3001 --auth-proxy-token s
 |--------|------|-------------|
 | POST | `/auth/login` | Email/password login |
 | POST | `/auth/change-password` | Change password (email users) |
+| GET | `/auth/me` | Current authenticated user |
+| POST | `/auth/logout` | Clear auth session cookie |
 | GET | `/auth/github` | GitHub OAuth redirect |
 | GET | `/auth/github/callback` | GitHub OAuth callback |
 

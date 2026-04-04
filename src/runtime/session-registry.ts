@@ -25,12 +25,14 @@ interface SessionEntry {
   ringBuffer: SSEEnvelope[]
   seq: number
   unsubscribe: (() => void) | null
+  timer: ReturnType<typeof setTimeout> | null
 }
 
 interface SessionRegistryOptions {
   createSession: SessionFactory
   ringBufferSize: number
   maxConcurrentPerUser: number
+  promptTimeoutMs?: number
 }
 
 export class SessionRegistry {
@@ -52,13 +54,14 @@ export class SessionRegistry {
         ringBuffer: [],
         seq: 0,
         unsubscribe: null,
+        timer: null,
       }
       this.entries.set(sessionId, entry)
     }
     return entry
   }
 
-  async send(
+  send(
     sessionId: string,
     userId: string,
     sessionPath: string,
@@ -81,6 +84,25 @@ export class SessionRegistry {
     entry.status = 'running'
     this.broadcast(entry, 'status', { status: 'running' })
 
+    return this.runSend(entry, sessionPath, cwd, message)
+  }
+
+  private async runSend(
+    entry: SessionEntry,
+    sessionPath: string,
+    cwd: string,
+    message: string,
+  ): Promise<void> {
+    let timedOut = false
+    const timeoutMs = this.options.promptTimeoutMs ?? 15 * 60 * 1000
+    entry.timer = setTimeout(() => {
+      timedOut = true
+      entry.status = 'error'
+      this.broadcast(entry, 'error', { code: 'timeout', message: 'Session prompt timed out' })
+      this.broadcast(entry, 'status', { status: 'error' })
+      entry.sdkSession?.abort().catch(() => {})
+    }, timeoutMs)
+
     try {
       // Create SDK session if needed
       if (!entry.sdkSession) {
@@ -91,13 +113,32 @@ export class SessionRegistry {
       }
 
       await entry.sdkSession.prompt(message)
+      if (timedOut || entry.status === 'error') {
+        return
+      }
       entry.status = 'idle'
       this.broadcast(entry, 'status', { status: 'idle' })
     } catch (err) {
+      if (timedOut) {
+        return
+      }
       entry.status = 'error'
       const errorMsg = err instanceof Error ? err.message : String(err)
       this.broadcast(entry, 'error', { code: 'PROMPT_ERROR', message: errorMsg })
       this.broadcast(entry, 'status', { status: 'error' })
+    } finally {
+      if (entry.timer) {
+        clearTimeout(entry.timer)
+        entry.timer = null
+      }
+      if (entry.unsubscribe) {
+        entry.unsubscribe()
+        entry.unsubscribe = null
+      }
+      if (entry.sdkSession) {
+        entry.sdkSession.dispose()
+        entry.sdkSession = null
+      }
     }
   }
 
@@ -132,6 +173,12 @@ export class SessionRegistry {
     for (const [, entry] of this.entries) {
       if (entry.status === 'running' && entry.sdkSession) {
         entry.sdkSession.abort().catch(() => {})
+        entry.status = 'idle'
+        this.broadcast(entry, 'status', { status: 'idle' })
+      }
+      if (entry.timer) {
+        clearTimeout(entry.timer)
+        entry.timer = null
       }
       if (entry.unsubscribe) {
         entry.unsubscribe()
@@ -157,12 +204,16 @@ export class SessionRegistry {
     }
 
     // Broadcast to SSE clients
+    const failedHandlers: SSEClientHandler[] = []
     for (const handler of entry.sseClients) {
       try {
         handler(envelope)
       } catch {
-        // Per-handler error isolation
+        failedHandlers.push(handler)
       }
+    }
+    for (const handler of failedHandlers) {
+      entry.sseClients.delete(handler)
     }
   }
 

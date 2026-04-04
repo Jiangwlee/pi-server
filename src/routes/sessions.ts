@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { SessionStore } from '../stores/session-store.js'
 import type { SessionRegistry } from '../runtime/session-registry.js'
+import { validateRelativePath } from '../runtime/path-resolver.js'
 import '../auth/types.js'
 
 export function createSessionRoutes(
@@ -17,9 +18,23 @@ export function createSessionRoutes(
 
   app.post('/api/sessions', async (c) => {
     const userId = c.get('userId')
-    const body = await c.req.json<{ cwd?: string; sessionDir?: string; label?: string }>()
-    const session = sessionStore.createSession(userId, body)
-    return c.json(session, 201)
+    const body = await c.req.json<{
+      cwd?: string
+      sessionDir?: string
+      session_dir?: string
+      label?: string
+    }>()
+
+    try {
+      const cwd = body.cwd !== undefined ? validateRelativePath(body.cwd) : undefined
+      const sessionDirInput = body.sessionDir ?? body.session_dir
+      const sessionDir = sessionDirInput !== undefined ? validateRelativePath(sessionDirInput) : undefined
+      const session = sessionStore.createSession(userId, { cwd, sessionDir, label: body.label })
+      return c.json(session, 201)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return c.json({ error: msg }, 400)
+    }
   })
 
   app.patch('/api/sessions/:id', async (c) => {

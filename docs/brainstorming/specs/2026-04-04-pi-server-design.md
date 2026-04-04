@@ -137,14 +137,13 @@ pi-server --auth-proxy-url http://auth-host:3001 --auth-proxy-token <token>
 
 ### 路径安全模型
 
-所有用户文件限制在固定根目录下，前端传入**相对路径**，后端拼接并校验。
+所有用户文件限制在固定根目录下，前端传入**相对路径**，后端拼接并校验。  
+`session_dir` 与 `cwd` 的目录布局由调用方决定，后端不强制 `sessions/`、`workspace/` 顶层命名。
 
 ```
 {PI_SERVER_DATA}/users/{userId}/
-├── sessions/
-│   └── {相对session_dir}/session.jsonl
-└── workspace/
-    └── {相对cwd}/
+├── {相对session_dir}/session.jsonl
+└── {相对cwd}/
 ```
 
 安全校验（边界层）：
@@ -155,7 +154,7 @@ pi-server --auth-proxy-url http://auth-host:3001 --auth-proxy-token <token>
 默认路径规则：
 - 未传 cwd → `default/`
 - 未传 session_dir → `{cwd}/{session_id}/`
-- 即：`POST /api/sessions {}` 生成 `sessions/default/{sid}/session.jsonl` + `workspace/default/`
+- 即：`POST /api/sessions {}` 生成 `default/{sid}/session.jsonl` + `default/`
 
 ### 数据模型
 
@@ -229,6 +228,8 @@ GET    /api/models                      可用模型列表
    - 完成后释放 session 引用
 
 2. **串行保护** — 同一 session status === 'running' 时拒绝新 send (409)
+
+   说明：`status = error` 允许再次 `send` 进行重试，仅 `running` 状态拒绝。
 
 3. **SSE 广播** — 环形缓冲（200 条），支持断线重连补发
 
