@@ -50,6 +50,7 @@ Frontend (any web app)
 ### Prerequisites
 
 - Node.js 22+
+- jq (required by `scripts/smoke-test.sh`)
 - pi coding-agent installed and logged into at least one LLM provider (`~/.pi/agent/auth.json` must exist)
 
 ### Install

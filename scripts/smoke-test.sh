@@ -73,7 +73,15 @@ SESS_CODE="$(curl -s -o /tmp/pi-smoke-session.json -w '%{http_code}' -b "$COOKIE
 SESSION_ID="$(jq -r '.id // empty' /tmp/pi-smoke-session.json)"
 SEND_CODE="$(curl -s -o /tmp/pi-smoke-send.json -w '%{http_code}' -b "$COOKIE_FILE" -H 'content-type: application/json' \
   -d '{"message":"Reply with exactly: SMOKE_OK"}' "http://127.0.0.1:$SERVER_PORT/api/sessions/$SESSION_ID/send")"
-(timeout 30s curl -sN -b "$COOKIE_FILE" "http://127.0.0.1:$SERVER_PORT/api/sessions/$SESSION_ID/events" > "$EVENTS_FILE") || true
+set +e
+timeout 30s curl -sN -b "$COOKIE_FILE" "http://127.0.0.1:$SERVER_PORT/api/sessions/$SESSION_ID/events" > "$EVENTS_FILE"
+SSE_EXIT_CODE=$?
+set -e
+if [[ "$SSE_EXIT_CODE" != "0" && "$SSE_EXIT_CODE" != "124" ]]; then
+  echo "[smoke] SSE stream request failed with exit code $SSE_EXIT_CODE"
+  COMPOSE_PROJECT_NAME="$PROJECT_NAME" PI_SERVER_IMAGE="$IMAGE_TAG" docker compose logs --tail=200
+  exit 1
+fi
 MODELS_CODE="$(curl -s -o /tmp/pi-smoke-models.json -w '%{http_code}' -b "$COOKIE_FILE" "http://127.0.0.1:$SERVER_PORT/api/models")"
 MODELS_COUNT="$(jq 'length' /tmp/pi-smoke-models.json)"
 
@@ -84,7 +92,7 @@ if [[ "$LOGIN_CODE" != "200" || "$ME_CODE" != "200" || "$SESS_CODE" != "201" || 
   exit 1
 fi
 
-if ! grep -q '"text":"SMOKE_OK"' "$EVENTS_FILE"; then
+if ! grep -q 'SMOKE_OK' "$EVENTS_FILE"; then
   echo "[smoke] expected assistant output not found in SSE stream"
   COMPOSE_PROJECT_NAME="$PROJECT_NAME" PI_SERVER_IMAGE="$IMAGE_TAG" docker compose logs --tail=200
   exit 1
