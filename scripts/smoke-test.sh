@@ -35,7 +35,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[smoke] Building image: $IMAGE_TAG"
-docker build -t "$IMAGE_TAG" -f docker/Dockerfile .
+docker build -t "$IMAGE_TAG" -f packages/server/docker/Dockerfile .
 
 echo "[smoke] Starting stack"
 COMPOSE_PROJECT_NAME="$PROJECT_NAME" PI_SERVER_IMAGE="$IMAGE_TAG" PI_AUTH_PORT="$AUTH_PORT" PI_SERVER_PORT="$SERVER_PORT" docker compose up -d --no-build

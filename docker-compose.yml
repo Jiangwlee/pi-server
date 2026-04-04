@@ -2,7 +2,7 @@ services:
   auth-server:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: packages/server/docker/Dockerfile
     image: ${PI_SERVER_IMAGE:-pi-server:local}
     environment:
       PI_ROLE: auth-server

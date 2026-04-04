@@ -16,22 +16,29 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates python3 make g++ tzdata \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm config set registry https://registry.npmmirror.com
+RUN corepack enable \
+  && corepack prepare pnpm@latest --activate
+
+RUN npm config set registry https://registry.npmmirror.com \
+  && pnpm config set registry https://registry.npmmirror.com
 ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 ENV PIP_TRUSTED_HOST=mirrors.aliyun.com
 
-COPY package.json package-lock.json /app/
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json /app/
+COPY packages/server/package.json /app/packages/server/package.json
 
-RUN npm config set loglevel verbose \
-  && npm ci --verbose
+RUN pnpm install --frozen-lockfile --filter @pi-server/server...
 
-COPY . /app
+COPY packages/server /app/packages/server
 
-RUN npm run build --verbose \
-  && chmod +x dist/cli.js \
+RUN pnpm --filter @pi-server/server build \
+  && chmod +x /app/packages/server/dist/cli.js \
+  && cd /app/packages/server \
   && npm link
 
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+WORKDIR /app/packages/server
+
+COPY packages/server/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
