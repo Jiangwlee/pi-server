@@ -25,8 +25,12 @@ export function LoginForm(
       className={`${classNames?.root ?? ''} ${className ?? ''}`.trim()}
       onSubmit={async (e) => {
         e.preventDefault()
-        await login(email, password)
-        onSuccess?.()
+        try {
+          await login(email, password)
+          onSuccess?.()
+        } catch {
+          // Error state is handled by useAuth; keep submit handler rejection-free.
+        }
       }}
     >
       <div className={classNames?.field}>
