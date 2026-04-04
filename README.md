@@ -42,6 +42,7 @@ Frontend (any web app)
 - **On-demand session runtime** — Sessions created per-message, not persistent in memory; serial protection (409), per-user concurrency limit (429), 15min timeout
 - **SSE streaming** — Real-time event streaming with ring buffer (200 entries) and `Last-Event-ID` reconnection
 - **Distributed deployment** — Each node is fully independent (own users, DB, sessions); only LLM credentials are shared via Auth Server mode
+- **Startup resilience** — Auth proxy mode retries initial credential sync (20 attempts, 1s delay) to handle Docker startup races
 - **Path security** — Frontend passes relative paths only; backend resolves under `{dataDir}/users/{userId}/` with traversal prevention
 - **Structured logging** — JSON/plain format, log level control, request tracing with `x-request-id`
 
@@ -183,6 +184,9 @@ docker compose logs -f pi-server
 # User management inside container
 docker exec pi-server pi-server list-users
 docker exec pi-server pi-server add-user --email new@example.com --password pass --login newuser
+
+# Run smoke test (requires jq, .env, and ~/.pi/agent/auth.json)
+scripts/smoke-test.sh
 
 # Stop
 docker compose down
@@ -335,6 +339,7 @@ In Docker: `docker exec pi-server pi-server <command>`
 ```bash
 npm test              # Run all tests (vitest)
 npm run test:watch    # Watch mode
+scripts/smoke-test.sh # Docker end-to-end smoke test (requires jq)
 ```
 
 ## Development
