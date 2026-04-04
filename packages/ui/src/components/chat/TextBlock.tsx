@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import type { TextContent } from '../../client/types.js'
+import { MarkdownRenderer } from './markdown/index.js'
 
 export const TextBlock = memo(function TextBlock(
   {
@@ -13,8 +14,8 @@ export const TextBlock = memo(function TextBlock(
   },
 ) {
   return (
-    <div className={className} style={{ whiteSpace: 'pre-wrap' }}>
-      {content.text}
+    <div className={className}>
+      <MarkdownRenderer streaming={streaming}>{content.text}</MarkdownRenderer>
       {streaming ? <span className="streaming-cursor">▍</span> : null}
     </div>
   )
