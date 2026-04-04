@@ -37,19 +37,28 @@ export function splitMarkdownBlocks(content: string): MarkdownBlock[] {
   return blocks
 }
 
-function MarkdownCodeComponent(
-  {
-    children,
-    className,
-  }: {
-    children?: ReactNode
-    className?: string
-  },
-) {
+/**
+ * Extract code text and language from the <code> child element that
+ * react-markdown places inside <pre> for fenced code blocks.
+ */
+function useCode(raw: ReactNode): { content: string; lang: string } | undefined {
+  if (!raw || typeof raw !== 'object' || !('props' in (raw as object))) return undefined
+  const props = (raw as { props?: { children?: unknown; className?: string } }).props
+  if (!props) return undefined
+  const children = props.children
+  const content = Array.isArray(children) ? (children[0] as string) : typeof children === 'string' ? children : ''
+  if (!content) return undefined
+  const lang = props.className?.replace('language-', '') || 'text'
+  return { content, lang }
+}
+
+function MarkdownPreComponent({ children }: { children?: ReactNode }) {
   const streaming = useContext(MarkdownStreamingContext)
+  const code = useCode(children)
+  if (!code) return <pre>{children}</pre>
   return (
-    <CodeBlock className={className} streaming={streaming}>
-      {children}
+    <CodeBlock className={code.lang ? `language-${code.lang}` : undefined} streaming={streaming}>
+      {code.content}
     </CodeBlock>
   )
 }
@@ -70,13 +79,12 @@ export const MarkdownRenderer = memo(function MarkdownRenderer(
   const staticComponents = useMemo<Components>(() => {
     return {
       pre({ children: preChildren }) {
-        return <>{preChildren}</>
-      },
-      code({ children: codeChildren, className: codeClassName }) {
-        return <MarkdownCodeComponent className={codeClassName}>{codeChildren}</MarkdownCodeComponent>
+        return <MarkdownPreComponent>{preChildren}</MarkdownPreComponent>
       },
     }
   }, [])
+
+  const blocks = useMemo(() => streaming ? splitMarkdownBlocks(children) : [], [children, streaming])
 
   if (!streaming) {
     return (
@@ -89,8 +97,6 @@ export const MarkdownRenderer = memo(function MarkdownRenderer(
       </div>
     )
   }
-
-  const blocks = useMemo(() => splitMarkdownBlocks(children), [children])
 
   return (
     <div className={className}>

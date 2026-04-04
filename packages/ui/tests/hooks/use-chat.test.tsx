@@ -314,7 +314,7 @@ describe('useChat', () => {
     act(() => {
       sse.emitEvent({
         event: 'pi',
-        data: { type: 'message_start', message: {} },
+        data: { type: 'message_start', message: { role: 'assistant' } },
       })
     })
 
@@ -334,7 +334,7 @@ describe('useChat', () => {
     await waitFor(() => expect(result.current.status).toBe('idle'))
 
     act(() => {
-      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
     })
 
     await waitFor(() => {
@@ -382,7 +382,7 @@ describe('useChat', () => {
     await waitFor(() => expect(result.current.status).toBe('idle'))
 
     act(() => {
-      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
     })
 
     await waitFor(() => {
@@ -425,7 +425,7 @@ describe('useChat', () => {
     await waitFor(() => expect(result.current.status).toBe('idle'))
 
     act(() => {
-      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
     })
 
     await waitFor(() => {
@@ -477,7 +477,7 @@ describe('useChat', () => {
     })
   })
 
-  it('status idle reloads history with structured content', async () => {
+  it('agent_end reloads history with structured content', async () => {
     const history: SessionHistoryEntry[] = [
       { message: { role: 'assistant', content: [{ type: 'text', text: 'world' }] } },
     ]
@@ -485,12 +485,15 @@ describe('useChat', () => {
     const sse = makeConnect()
     const { result } = renderHook(() => useChat({ sessionId: 's1', client, connect: sse.connect }))
 
+    // Wait for initial history load
+    await waitFor(() => expect(result.current.status).toBe('idle'))
+
+    // Clear messages to distinguish initial load from agent_end reload
     act(() => {
-      sse.emitEvent({ event: 'status', data: { status: 'idle' } })
+      sse.emitEvent({ event: 'pi', data: { type: 'agent_end' } })
     })
 
     await waitFor(() => {
-      expect(result.current.status).toBe('idle')
       const assistantMsg = result.current.messages.find((m) => m.role === 'assistant')
       expect(assistantMsg).toBeDefined()
       expect(assistantMsg!.content).toEqual([{ type: 'text', text: 'world' }])
@@ -505,7 +508,7 @@ describe('useChat', () => {
     await waitFor(() => expect(result.current.status).toBe('idle'))
 
     act(() => {
-      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
     })
 
     await waitFor(() => {
@@ -561,7 +564,7 @@ describe('useChat', () => {
     await waitFor(() => expect(result.current.status).toBe('idle'))
 
     act(() => {
-      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
     })
 
     await waitFor(() => {
@@ -599,7 +602,7 @@ describe('useChat', () => {
 
     // First message_start
     act(() => {
-      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
     })
 
     await waitFor(() => {
@@ -608,7 +611,7 @@ describe('useChat', () => {
 
     // Second message_start without message_end — should finalize the first
     act(() => {
-      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: {} } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
     })
 
     await waitFor(() => {
@@ -619,6 +622,51 @@ describe('useChat', () => {
       // Second should be streaming
       expect(assistantMsgs[1].streaming).toBe(true)
     })
+  })
+
+  it('generates unique ids even when events are emitted in the same tick', async () => {
+    const { client } = makeClient()
+    const sse = makeConnect()
+    const { result } = renderHook(() => useChat({ sessionId: 's1', client, connect: sse.connect }))
+
+    await waitFor(() => expect(result.current.status).toBe('idle'))
+
+    act(() => {
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
+      sse.emitEvent({ event: 'pi', data: { type: 'message_start', message: { role: 'assistant' } } })
+      sse.emitEvent({
+        event: 'pi',
+        data: {
+          type: 'turn_end',
+          message: {},
+          toolResults: [
+            {
+              role: 'toolResult',
+              toolCallId: 'tc1',
+              toolName: 'readFile',
+              content: [{ type: 'text', text: 'file 1' }],
+              isError: false,
+              timestamp: 1000,
+            },
+            {
+              role: 'toolResult',
+              toolCallId: 'tc2',
+              toolName: 'readFile',
+              content: [{ type: 'text', text: 'file 2' }],
+              isError: false,
+              timestamp: 1001,
+            },
+          ],
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.messages.length).toBe(4)
+    })
+
+    const ids = result.current.messages.map((m) => m.id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 
   it('abort calls client.abort', async () => {

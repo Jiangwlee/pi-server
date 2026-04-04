@@ -34,7 +34,7 @@ export const CodeBlock = memo(function CodeBlock(
 
   if (streaming && lines.length > 0) {
     return (
-      <pre>
+      <div className="pi-code-block">
         <code className={className}>
           {lines.map((line, lineIndex) => (
             <span key={`line-${lineIndex}`}>
@@ -50,17 +50,21 @@ export const CodeBlock = memo(function CodeBlock(
             </span>
           ))}
         </code>
-      </pre>
+      </div>
     )
   }
 
   if (!streaming && staticHtml) {
-    return <div dangerouslySetInnerHTML={{ __html: staticHtml }} />
+    // Replace <pre> with <div class="pi-code-block"> to avoid invalid <p><pre> nesting
+    const safeHtml = staticHtml
+      .replace(/<pre\b/g, '<div class="pi-code-block"')
+      .replace(/<\/pre>/g, '</div>')
+    return <div dangerouslySetInnerHTML={{ __html: safeHtml }} />
   }
 
   return (
-    <pre>
+    <div className="pi-code-block">
       <code className={className}>{code}</code>
-    </pre>
+    </div>
   )
 })

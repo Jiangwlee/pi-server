@@ -32,7 +32,7 @@ describe('CodeBlock', () => {
       <CodeBlock className="language-ts">{'const a = 1'}</CodeBlock>,
     )
 
-    const pre = container.querySelector('pre')
+    const pre = container.querySelector('.pi-code-block')
     const code = container.querySelector('code.language-ts')
     expect(pre).toBeTruthy()
     expect(code).toBeTruthy()

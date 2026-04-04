@@ -53,7 +53,7 @@ function parseSSEBlock(block: string): ParsedSSEFrame | null {
 
 export function parseSSEStream(chunk: string): ParsedSSEFrame[] {
   const frames: ParsedSSEFrame[] = []
-  const blocks = chunk.split('\n\n').filter(Boolean)
+  const blocks = chunk.split(/\r?\n\r?\n/).filter(Boolean)
 
   for (const block of blocks) {
     const parsed = parseSSEBlock(block)
@@ -67,7 +67,7 @@ export function parseSSEStream(chunk: string): ParsedSSEFrame[] {
 
 export function consumeSSEBuffer(buffer: string): { frames: ParsedSSEFrame[]; rest: string } {
   const frames: ParsedSSEFrame[] = []
-  const blocks = buffer.split('\n\n')
+  const blocks = buffer.split(/\r?\n\r?\n/)
   const rest = blocks.pop() ?? ''
   for (const block of blocks) {
     if (!block.trim()) continue
@@ -116,6 +116,7 @@ export function connectSSE(options: SSEConnectOptions): SSEConnection {
         const reqHeaders: Record<string, string> = { ...headers }
         if (lastEventId) reqHeaders['Last-Event-ID'] = lastEventId
 
+        console.log('[SSE] connecting to', url, 'attempt:', attempt)
         const res = await fetchImpl(url, {
           method: 'GET',
           credentials,
@@ -123,6 +124,7 @@ export function connectSSE(options: SSEConnectOptions): SSEConnection {
           signal: controller.signal,
         })
 
+        console.log('[SSE] response status:', res.status, 'ok:', res.ok, 'hasBody:', !!res.body)
         if (!res.ok || !res.body) {
           throw new Error('Failed to open SSE stream')
         }
@@ -136,8 +138,10 @@ export function connectSSE(options: SSEConnectOptions): SSEConnection {
 
         while (!closed) {
           const { done: streamDone, value } = await reader.read()
-          if (streamDone) break
-          pending += decoder.decode(value, { stream: true })
+          if (streamDone) { console.log('[SSE] stream done'); break }
+          const chunk = decoder.decode(value, { stream: true })
+          console.log('[SSE] chunk received, length:', chunk.length, 'preview:', chunk.slice(0, 100))
+          pending += chunk
           const parsed = consumeSSEBuffer(pending)
           pending = parsed.rest
           for (const frame of parsed.frames) {

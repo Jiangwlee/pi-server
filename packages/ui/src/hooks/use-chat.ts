@@ -21,7 +21,7 @@ import type {
 } from '../client/types.js'
 
 type ChatClient = {
-  send: (id: string, input: { message: string }) => Promise<{ ok: true }>
+  send: (id: string, input: { message: string; model?: string }) => Promise<{ ok: true }>
   abort: (id: string) => Promise<{ ok: true }>
   history: (id: string) => Promise<{ messages: SessionHistoryEntry[] }>
 }
@@ -43,7 +43,7 @@ type UseChatResult = {
   messages: ChatMessage[]
   status: SessionStatus
   error: string | null
-  send: (message: string) => Promise<void>
+  send: (message: string, options?: { model?: string }) => Promise<void>
   abort: () => Promise<void>
   loadHistory: () => Promise<void>
 }
@@ -234,11 +234,18 @@ export function useChat(options: UseChatOptions): UseChatResult {
   const [error, setError] = useState<string | null>(null)
   const streamMsgRef = useRef<string | null>(null)
 
+  const nextId = useCallback((prefix: string): string => {
+    const random = globalThis.crypto?.randomUUID?.() ?? `${sessionId}-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    return `${prefix}-${random}`
+  }, [sessionId])
+
   const loadHistory = useCallback(async (): Promise<void> => {
+    console.log('[useChat] loadHistory called for', sessionId)
     const history = await client.history(sessionId)
     const next = history.messages
       .map((entry, index) => toChatMessage(entry, index))
       .filter((entry): entry is ChatMessage => Boolean(entry))
+    console.log('[useChat] loadHistory got', next.length, 'messages, roles:', next.map(m => m.role))
     setMessages(next)
   }, [client, sessionId])
 
@@ -248,16 +255,17 @@ export function useChat(options: UseChatOptions): UseChatResult {
     setStatus('idle')
     setError(null)
 
+    console.log('[useChat] setting up SSE for session:', sessionId)
     const connection = connect({
       sessionId,
       onEvent: (frame) => {
+        console.log('[useChat] SSE frame:', frame.event, frame.data)
         if (frame.event === 'status') {
           const payload = frame.data as { status?: SessionStatus }
           if (payload.status) {
             setStatus(payload.status)
-            if (payload.status === 'idle' || payload.status === 'error') {
-              void loadHistory()
-            }
+            // Don't loadHistory on status change — agent_end handles authoritative reload.
+            // Calling it here races with streaming state and can wipe in-flight messages.
           }
           return
         }
@@ -283,7 +291,14 @@ export function useChat(options: UseChatOptions): UseChatResult {
               break
 
             case 'message_start': {
-              const msgId = 'stream-' + Date.now()
+              // SDK emits message_start for both user and assistant messages.
+              // Only create a streaming placeholder for assistant messages.
+              const startMsg = (agentEvent as { message?: { role?: string } }).message
+              console.log('[useChat] message_start role:', startMsg?.role)
+              if (startMsg?.role !== 'assistant') break
+
+              const msgId = nextId('stream')
+              console.log('[useChat] creating streaming msg:', msgId)
               const prevStreamId = streamMsgRef.current
               streamMsgRef.current = msgId
               setMessages((prev) => {
@@ -312,6 +327,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
             case 'message_update': {
               const evt = agentEvent.assistantMessageEvent
               const currentId = streamMsgRef.current
+              console.log('[useChat] message_update type:', evt?.type, 'currentId:', currentId)
               if (!currentId) break
 
               // Handle done/error at the AssistantMessageEvent level
@@ -370,7 +386,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
               // Add tool results as separate ChatMessage entries
               if ('toolResults' in agentEvent && Array.isArray(agentEvent.toolResults)) {
                 const toolMsgs: ChatMessage[] = agentEvent.toolResults.map((tr, i) => ({
-                  id: 'tool-' + Date.now() + '-' + i,
+                  id: nextId(`tool-${i}`),
                   role: 'tool' as const,
                   content: parseContent(tr.content),
                   toolCallId: tr.toolCallId,
@@ -386,6 +402,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
             }
 
             case 'agent_end': {
+              console.log('[useChat] agent_end, reloading history')
               // Reload history for authoritative state
               void loadHistory()
               break
@@ -394,6 +411,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
         }
       },
       onError: (err) => {
+        console.error('[useChat] SSE onError:', err)
         const msg = err instanceof Error ? err.message : String(err)
         setError(msg)
       },
@@ -404,12 +422,13 @@ export function useChat(options: UseChatOptions): UseChatResult {
     return () => {
       connection.close()
     }
-  }, [connect, loadHistory, sessionId])
+  }, [connect, loadHistory, nextId, sessionId])
 
-  const send = useCallback(async (message: string): Promise<void> => {
+  const send = useCallback(async (message: string, options?: { model?: string }): Promise<void> => {
     const text = message.trim()
+    console.log('[useChat] send called, text:', text, 'model:', options?.model)
     if (!text) return
-    const optimisticId = 'local-user-' + Date.now()
+    const optimisticId = nextId('local-user')
     setError(null)
     setStatus('running')
     setMessages((prev) => [...prev, {
@@ -419,8 +438,11 @@ export function useChat(options: UseChatOptions): UseChatResult {
     }])
 
     try {
-      await client.send(sessionId, { message: text })
+      console.log('[useChat] calling client.send...')
+      await client.send(sessionId, { message: text, model: options?.model })
+      console.log('[useChat] client.send succeeded')
     } catch (err) {
+      console.error('[useChat] client.send failed:', err)
       setStatus('error')
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
       if (err instanceof ApiError && err.status === 409) {
@@ -434,7 +456,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg)
     }
-  }, [client, sessionId])
+  }, [client, nextId, sessionId])
 
   const abort = useCallback(async (): Promise<void> => {
     setError(null)
