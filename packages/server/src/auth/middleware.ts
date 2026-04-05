@@ -1,5 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono'
 import { sign, unsign } from 'cookie-signature'
+import { logger } from '../logger.js'
 import './types.js'
 
 const COOKIE_NAME = 'pi_session'
@@ -20,17 +21,20 @@ export function authMiddleware(secret: string): MiddlewareHandler {
   return async (c, next) => {
     const cookieHeader = c.req.header('cookie')
     if (!cookieHeader) {
+      logger.debug({ reason: 'no_cookie', path: c.req.path }, 'auth.rejected')
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
     const cookies = parseCookies(cookieHeader)
     const raw = cookies[COOKIE_NAME]
     if (!raw || !raw.startsWith('s:')) {
+      logger.debug({ reason: 'invalid_cookie_format', path: c.req.path }, 'auth.rejected')
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
     const unsigned = unsign(raw.slice(2), secret)
     if (unsigned === false) {
+      logger.warn({ reason: 'signature_invalid', path: c.req.path }, 'auth.rejected')
       return c.json({ error: 'Unauthorized' }, 401)
     }
 

@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
+import { logger } from '../logger.js'
 
 export interface User {
   id: string
@@ -29,6 +30,7 @@ export class UserStore {
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(id, input.email ?? null, input.authProvider, input.authProviderId, input.displayName, input.passwordHash ?? null)
 
+    logger.info({ userId: id, authProvider: input.authProvider, displayName: input.displayName }, 'store.user_created')
     return this.findById(id)!
   }
 
@@ -49,6 +51,9 @@ export class UserStore {
 
   updatePasswordHash(id: string, passwordHash: string): boolean {
     const result = this.db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id)
+    if (result.changes > 0) {
+      logger.info({ userId: id }, 'store.user_password_updated')
+    }
     return result.changes > 0
   }
 

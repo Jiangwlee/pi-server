@@ -19,7 +19,7 @@ import { SessionRegistry } from './runtime/session-registry.js'
 import { createSessionRoutes } from './routes/sessions.js'
 import { createRuntimeRoutes } from './routes/runtime.js'
 import { createModelRoutes } from './routes/models.js'
-import { createLogger, withError } from './logger.js'
+import { initLogger, logger } from './logger.js'
 import { createRequestLoggerMiddleware } from './http/request-logger.js'
 
 import {
@@ -29,7 +29,7 @@ import {
 } from '@mariozechner/pi-coding-agent'
 
 const config = loadConfig()
-const logger = createLogger(config.logLevel, config.logFormat)
+initLogger(config.logLevel, config.logFormat)
 
 // Auth Server mode: minimal server that only serves auth.json
 if (config.authServer) {
@@ -40,7 +40,7 @@ if (config.authServer) {
     c.header('x-request-id', requestId)
     await next()
   })
-  app.use('*', createRequestLoggerMiddleware(logger))
+  app.use('*', createRequestLoggerMiddleware())
 
   app.get('/auth.json', (c) => {
     const token = c.req.header('Authorization')
@@ -58,7 +58,7 @@ if (config.authServer) {
   })
 
   const server = serve({ fetch: app.fetch, port: config.port })
-  logger.info('server.auth_mode_started', { port: config.port })
+  logger.info({ port: config.port }, 'server.auth_mode_started')
 
   process.on('SIGTERM', () => server.close())
   process.on('SIGINT', () => server.close())
@@ -76,13 +76,12 @@ if (config.authServer) {
   const piProvider = new PiProvider({
     authProxyUrl: config.authProxyUrl,
     authProxyToken: config.authProxyToken,
-    logger,
   })
 
   // Session Registry with real SDK factory
   const registry = new SessionRegistry({
     createSession: async (sessionPath: string, cwd: string) => {
-      logger.info('sdk.create_agent_session_started', { sessionPath, cwd })
+      logger.info({ sessionPath, cwd }, 'sdk.create_agent_session_started')
       const authStorage = piProvider.getAuthStorage()
       const modelRegistry = piProvider.getModelRegistry()
       const tools = createCodingTools(cwd)
@@ -92,7 +91,7 @@ if (config.authServer) {
         tools,
         sessionManager: SessionManager.open(sessionPath),
       })
-      logger.info('sdk.create_agent_session_completed', { sessionPath, cwd })
+      logger.info({ sessionPath, cwd }, 'sdk.create_agent_session_completed')
       return {
         prompt: (text: string) => session.prompt(text),
         setModel: async (provider: string, modelId: string) => {
@@ -110,7 +109,6 @@ if (config.authServer) {
     ringBufferSize: config.sseRingBufferSize,
     maxConcurrentPerUser: config.maxConcurrentSessionsPerUser,
     promptTimeoutMs: 15 * 60 * 1000,
-    logger,
   })
 
   // Middleware
@@ -122,7 +120,7 @@ if (config.authServer) {
     c.header('x-request-id', requestId)
     await next()
   })
-  app.use('*', createRequestLoggerMiddleware(logger, { includeUserId: true }))
+  app.use('*', createRequestLoggerMiddleware({ includeUserId: true }))
 
   // Auth routes (public)
   app.route('/', createEmailPublicAuthRoutes(userStore, config.sessionSecret))
@@ -147,7 +145,7 @@ if (config.authServer) {
 
   // API routes
   app.route('/', createSessionRoutes(sessionStore, registry))
-  app.route('/', createRuntimeRoutes(sessionStore, registry, config.dataDir, logger))
+  app.route('/', createRuntimeRoutes(sessionStore, registry, config.dataDir))
   app.route('/', createModelRoutes(piProvider))
 
   // Startup
@@ -156,7 +154,7 @@ if (config.authServer) {
     await piProvider.init()
 
     const server = serve({ fetch: app.fetch, port: config.port })
-    logger.info('server.started', { port: config.port })
+    logger.info({ port: config.port }, 'server.started')
 
     const shutdown = () => {
       logger.info('server.shutting_down')
@@ -171,7 +169,7 @@ if (config.authServer) {
   }
 
   start().catch((err) => {
-    logger.error('server.failed_to_start', withError({}, err))
+    logger.error({ err }, 'server.failed_to_start')
     process.exit(1)
   })
 }

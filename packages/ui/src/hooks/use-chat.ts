@@ -403,6 +403,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
         }
       },
       onError: (err) => {
+        console.error('[useChat] SSE error:', err instanceof Error ? err.message : err)
         const msg = err instanceof Error ? err.message : String(err)
         setError(msg)
       },
@@ -430,6 +431,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
     try {
       await client.send(sessionId, { message: text, model: options?.model })
     } catch (err) {
+      console.error('[useChat] send failed:', err instanceof ApiError ? `${err.status} ${err.body}` : err)
       setStatus('error')
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
       if (err instanceof ApiError && err.status === 409) {

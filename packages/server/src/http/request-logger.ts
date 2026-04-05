@@ -1,13 +1,11 @@
 import type { MiddlewareHandler } from 'hono'
-import type { Logger } from '../logger.js'
-import { withError } from '../logger.js'
+import { logger } from '../logger.js'
 
 interface RequestLoggerOptions {
   includeUserId?: boolean
 }
 
 export function createRequestLoggerMiddleware(
-  logger: Logger,
   options: RequestLoggerOptions = {},
 ): MiddlewareHandler {
   return async (c, next) => {
@@ -16,22 +14,23 @@ export function createRequestLoggerMiddleware(
 
     try {
       await next()
-      logger.info('http_request', {
+      logger.info({
         requestId,
         method: c.req.method,
         path: c.req.path,
         status: c.res.status,
         durationMs: Date.now() - start,
         ...(options.includeUserId ? { userId: c.get('userId') } : {}),
-      })
+      }, 'http_request')
     } catch (err) {
-      logger.error('http_request_failed', withError({
+      logger.error({
         requestId,
         method: c.req.method,
         path: c.req.path,
         durationMs: Date.now() - start,
         ...(options.includeUserId ? { userId: c.get('userId') } : {}),
-      }, err))
+        err,
+      }, 'http_request_failed')
       throw err
     }
   }

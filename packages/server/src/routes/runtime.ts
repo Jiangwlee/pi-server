@@ -4,15 +4,13 @@ import type { SessionStore } from '../stores/session-store.js'
 import type { SessionRegistry } from '../runtime/session-registry.js'
 import { resolveSessionPath, resolveWorkspacePath, ensureDirs } from '../runtime/path-resolver.js'
 import { readFileSync } from 'node:fs'
-import type { Logger } from '../logger.js'
-import { withError } from '../logger.js'
+import { logger } from '../logger.js'
 import '../auth/types.js'
 
 export function createRuntimeRoutes(
   sessionStore: SessionStore,
   registry: SessionRegistry,
   dataDir: string,
-  logger: Logger,
 ): Hono {
   const app = new Hono()
 
@@ -56,22 +54,24 @@ export function createRuntimeRoutes(
       // Fire and forget — client listens via SSE
       registry.send(sessionId, userId, sessionPath, workspacePath, body.message, model)
         .catch((err) => {
-          logger.error('runtime.send_async_failed', withError({
+          logger.error({
             requestId: c.get('requestId'),
             sessionId,
             userId,
-          }, err))
+            err,
+          }, 'runtime.send_async_failed')
         }) // errors are also broadcast via SSE
       return c.json({ ok: true }, 202)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('busy')) return c.json({ error: msg }, 409)
       if (msg.includes('concurrent')) return c.json({ error: msg }, 429)
-      logger.error('runtime.send_rejected', withError({
+      logger.error({
         requestId: c.get('requestId'),
         sessionId,
         userId,
-      }, err))
+        err,
+      }, 'runtime.send_rejected')
       return c.json({ error: msg }, 500)
     }
   })
@@ -170,11 +170,11 @@ export function createRuntimeRoutes(
         )
       return c.json({ messages: entries })
     } catch {
-      logger.warn('runtime.history_read_failed', {
+      logger.warn({
         requestId: c.get('requestId'),
         sessionId,
         userId,
-      })
+      }, 'runtime.history_read_failed')
       return c.json({ messages: [] })
     }
   })

@@ -157,8 +157,10 @@ export function connectSSE(options: SSEConnectOptions): SSEConnection {
       } catch (error) {
         if (closed || controller.signal.aborted) return
         attempt += 1
+        console.warn(`[SSE] connection lost, retry ${attempt}/${maxRetries}`, error instanceof Error ? error.message : error)
         onError?.(error, attempt)
         if (attempt > maxRetries) {
+          console.error(`[SSE] giving up after ${maxRetries} retries`)
           throw error
         }
         await sleep(retryDelayMs)

@@ -28,6 +28,7 @@ function forwardSSE(request: NextRequest, params: { path: string[] }): Response 
         },
       }, (res) => {
         if (res.statusCode && res.statusCode !== 200) {
+          console.error('[sse-proxy] upstream error', { url: targetUrl.href, status: res.statusCode })
           // Collect error body and close stream so the client gets a proper error
           let body = ''
           res.on('data', (chunk: Buffer) => { body += chunk.toString() })
@@ -49,6 +50,7 @@ function forwardSSE(request: NextRequest, params: { path: string[] }): Response 
         })
       })
       upstreamReq.on('error', (err) => {
+        console.error('[sse-proxy] connection error', { url: targetUrl.href, error: String(err) })
         controller.error(err)
       })
       upstreamReq.end()

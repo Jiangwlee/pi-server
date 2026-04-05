@@ -11,10 +11,10 @@ import { SessionStore, type Session } from '../src/stores/session-store.js'
 import { authMiddleware } from '../src/auth/middleware.js'
 import { createRuntimeRoutes } from '../src/routes/runtime.js'
 import { SessionRegistry, type SdkSession } from '../src/runtime/session-registry.js'
-import { createLogger } from '../src/logger.js'
+import { initLogger } from '../src/logger.js'
 
 const SECRET = 'x'.repeat(32)
-const logger = createLogger('error', 'json')
+initLogger('error', 'json')
 
 function createHangingSession(): SdkSession {
   return {
@@ -69,7 +69,7 @@ describe('runtime routes /api/sessions/:id/send', () => {
 
     app = new Hono()
     app.use('/api/*', authMiddleware(SECRET))
-    app.route('/', createRuntimeRoutes(sessionStore, registry, dataDir, logger))
+    app.route('/', createRuntimeRoutes(sessionStore, registry, dataDir))
 
     const signed = `s:${sign(userId, SECRET)}`
     cookie = `pi_session=${encodeURIComponent(signed)}`
@@ -124,7 +124,7 @@ describe('runtime routes /api/sessions/:id/send', () => {
 
     app = new Hono()
     app.use('/api/*', authMiddleware(SECRET))
-    app.route('/', createRuntimeRoutes(sessionStore, registry, dataDir, logger))
+    app.route('/', createRuntimeRoutes(sessionStore, registry, dataDir))
 
     const res = await app.request(`/api/sessions/${sessionA.id}/send`, {
       method: 'POST',

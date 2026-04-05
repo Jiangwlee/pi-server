@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
+import { logger } from '../logger.js'
 
 export interface Session {
   id: string
@@ -31,6 +32,7 @@ export class SessionStore {
       VALUES (?, ?, ?, ?, ?)
     `).run(id, userId, cwd, sessionDir, input.label ?? null)
 
+    logger.info({ sessionId: id, userId, label: input.label ?? null }, 'store.session_created')
     return this.findByIdInternal(id)!
   }
 
@@ -52,6 +54,9 @@ export class SessionStore {
     const result = this.db.prepare(
       "UPDATE sessions SET deleted_at = datetime('now') WHERE id = ? AND user_id = ? AND deleted_at IS NULL"
     ).run(sessionId, userId)
+    if (result.changes > 0) {
+      logger.info({ sessionId, userId }, 'store.session_deleted')
+    }
     return result.changes > 0
   }
 

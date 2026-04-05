@@ -1,70 +1,39 @@
+import pino from 'pino'
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 export type LogFormat = 'json' | 'plain'
 
-const LEVEL_WEIGHT: Record<LogLevel, number> = {
-  debug: 10,
-  info: 20,
-  warn: 30,
-  error: 40,
-}
+let _logger: pino.Logger = pino({ level: 'silent' })
 
-export interface Logger {
-  debug: (message: string, fields?: Record<string, unknown>) => void
-  info: (message: string, fields?: Record<string, unknown>) => void
-  warn: (message: string, fields?: Record<string, unknown>) => void
-  error: (message: string, fields?: Record<string, unknown>) => void
-}
+export type Logger = pino.Logger
 
-function sanitizeError(err: unknown): Record<string, unknown> {
-  if (err instanceof Error) {
-    return {
-      name: err.name,
-      message: err.message,
-      stack: err.stack,
+/**
+ * Initialize the singleton logger. Must be called before first use.
+ * Subsequent calls reconfigure the logger in place.
+ */
+export function initLogger(level: LogLevel, format: LogFormat): void {
+  let transport: pino.TransportSingleOptions | undefined
+  if (format === 'plain') {
+    try {
+      require.resolve('pino-pretty')
+      transport = { target: 'pino-pretty', options: { colorize: true } }
+    } catch {
+      // pino-pretty not installed (production) — fall back to JSON
     }
   }
-  return { value: String(err) }
+
+  _logger = pino({ level, transport })
 }
 
-export function createLogger(level: LogLevel, format: LogFormat): Logger {
-  function shouldLog(target: LogLevel): boolean {
-    return LEVEL_WEIGHT[target] >= LEVEL_WEIGHT[level]
-  }
-
-  function write(target: LogLevel, message: string, fields?: Record<string, unknown>): void {
-    if (!shouldLog(target)) return
-
-    const payload = {
-      ts: new Date().toISOString(),
-      level: target,
-      msg: message,
-      ...(fields ?? {}),
-    }
-
-    if (format === 'json') {
-      const line = JSON.stringify(payload)
-      if (target === 'error') console.error(line)
-      else if (target === 'warn') console.warn(line)
-      else console.log(line)
-      return
-    }
-
-    const kv = fields
-      ? Object.entries(fields).map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`).join(' ')
-      : ''
-    const line = `[${payload.ts}] [${target}] ${message}${kv ? ` ${kv}` : ''}`
-    if (target === 'error') console.error(line)
-    else if (target === 'warn') console.warn(line)
-    else console.log(line)
-  }
-
-  return {
-    debug: (message, fields) => write('debug', message, fields),
-    info: (message, fields) => write('info', message, fields),
-    warn: (message, fields) => write('warn', message, fields),
-    error: (message, fields) => write('error', message, fields),
-  }
-}
+/** The singleton logger. Import this in any module. */
+export const logger: Logger = new Proxy({} as pino.Logger, {
+  get(_target, prop, receiver) {
+    return Reflect.get(_logger, prop, receiver)
+  },
+  has(_target, prop) {
+    return prop in _logger
+  },
+})
 
 export function parseLogLevel(input: string | undefined): LogLevel {
   if (input === 'debug' || input === 'info' || input === 'warn' || input === 'error') {
@@ -78,8 +47,4 @@ export function parseLogFormat(input: string | undefined): LogFormat {
     return input
   }
   return 'json'
-}
-
-export function withError(fields: Record<string, unknown>, error: unknown): Record<string, unknown> {
-  return { ...fields, error: sanitizeError(error) }
 }

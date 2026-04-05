@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3'
+import { logger } from './logger.js'
 
 const MIGRATIONS = `
 CREATE TABLE IF NOT EXISTS users (
@@ -30,5 +31,6 @@ export function initDb(dbPath: string): Database.Database {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   db.exec(MIGRATIONS)
+  logger.info({ dbPath }, 'db.initialized')
   return db
 }

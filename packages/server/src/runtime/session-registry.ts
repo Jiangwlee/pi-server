@@ -1,5 +1,4 @@
-import type { Logger } from '../logger.js'
-import { createLogger, withError } from '../logger.js'
+import { logger } from '../logger.js'
 export type SessionStatus = 'idle' | 'running' | 'error'
 
 export type SSEEnvelope = {
@@ -36,17 +35,14 @@ interface SessionRegistryOptions {
   ringBufferSize: number
   maxConcurrentPerUser: number
   promptTimeoutMs?: number
-  logger?: Logger
 }
 
 export class SessionRegistry {
   private entries = new Map<string, SessionEntry>()
   private options: SessionRegistryOptions
-  private logger: Logger
 
   constructor(options: SessionRegistryOptions) {
     this.options = options
-    this.logger = options.logger ?? createLogger('info', 'json')
   }
 
   private getOrCreateEntry(sessionId: string): SessionEntry {
@@ -78,25 +74,25 @@ export class SessionRegistry {
     const entry = this.getOrCreateEntry(sessionId)
 
     if (entry.status === 'running') {
-      this.logger.warn('session.send_rejected_busy', { sessionId, userId })
+      logger.warn({ sessionId, userId }, 'session.send_rejected_busy')
       throw new Error('Session is busy')
     }
 
     // Check per-user concurrent limit
     const runningForUser = this.countRunningForUser(userId)
     if (runningForUser >= this.options.maxConcurrentPerUser) {
-      this.logger.warn('session.send_rejected_concurrent_limit', {
+      logger.warn({
         sessionId,
         userId,
         runningForUser,
         limit: this.options.maxConcurrentPerUser,
-      })
+      }, 'session.send_rejected_concurrent_limit')
       throw new Error(`Too many concurrent sessions for user (limit: ${this.options.maxConcurrentPerUser})`)
     }
 
     entry.userId = userId
     entry.status = 'running'
-    this.logger.info('session.send_started', { sessionId, userId })
+    logger.info({ sessionId, userId }, 'session.send_started')
     this.broadcast(entry, 'status', { status: 'running' })
 
     return this.runSend(entry, sessionId, sessionPath, cwd, message, model)
@@ -124,29 +120,25 @@ export class SessionRegistry {
       this.broadcast(entry, 'error', { code: 'timeout', message: 'Session prompt timed out' })
       this.broadcast(entry, 'status', { status: 'error' })
       entry.sdkSession?.abort().catch(() => {})
-      this.logger.error('session.prompt_timeout', {
-        sessionId,
-        sessionPath,
-        cwd,
-      })
+      logger.error({ sessionId, sessionPath, cwd }, 'session.prompt_timeout')
     }, timeoutMs)
 
     try {
       // Create SDK session if needed
       if (!entry.sdkSession) {
-        this.logger.info('session.create_agent_session_started', {
+        logger.info({
           sessionId,
           userId: entry.userId,
           sessionPath,
           cwd,
-        })
+        }, 'session.create_agent_session_started')
         entry.sdkSession = await this.options.createSession(sessionPath, cwd)
-        this.logger.info('session.create_agent_session_completed', {
+        logger.info({
           sessionId,
           userId: entry.userId,
           sessionPath,
           cwd,
-        })
+        }, 'session.create_agent_session_completed')
         entry.unsubscribe = entry.sdkSession.subscribe((event: unknown) => {
           sdkEventCount += 1
           const eventType =
@@ -156,12 +148,12 @@ export class SessionRegistry {
           lastSdkEventType = eventType
           if (!firstSdkEventType) {
             firstSdkEventType = eventType
-            this.logger.info('session.sdk_first_event_received', {
+            logger.info({
               sessionId,
               userId: entry.userId,
               eventType,
               elapsedMs: Date.now() - promptStartedAt,
-            })
+            }, 'session.sdk_first_event_received')
           }
           if (eventType === 'message_end') {
             const payload = event as {
@@ -172,78 +164,78 @@ export class SessionRegistry {
                 provider?: string
               }
             }
-            this.logger.info('session.sdk_message_end', {
+            logger.info({
               sessionId,
               userId: entry.userId,
               stopReason: payload.message?.stopReason ?? null,
               errorMessage: payload.message?.errorMessage ?? null,
               model: payload.message?.model ?? null,
               provider: payload.message?.provider ?? null,
-            })
+            }, 'session.sdk_message_end')
           }
           this.broadcast(entry!, 'pi', event)
         })
       }
 
       if (model) {
-        this.logger.info('session.set_model_started', {
+        logger.info({
           sessionId,
           userId: entry.userId,
           provider: model.provider,
           modelId: model.modelId,
-        })
+        }, 'session.set_model_started')
         await entry.sdkSession.setModel(model.provider, model.modelId)
-        this.logger.info('session.set_model_completed', {
+        logger.info({
           sessionId,
           userId: entry.userId,
           provider: model.provider,
           modelId: model.modelId,
-        })
+        }, 'session.set_model_completed')
       }
 
-      this.logger.info('session.prompt_started', {
+      logger.info({
         sessionId,
         userId: entry.userId,
         messageLength: message.length,
-      })
+      }, 'session.prompt_started')
       progressTimer = setInterval(() => {
-        this.logger.info('session.prompt_in_progress', {
+        logger.info({
           sessionId,
           userId: entry.userId,
           elapsedMs: Date.now() - promptStartedAt,
           sdkEventCount,
           firstSdkEventType,
           lastSdkEventType,
-        })
+        }, 'session.prompt_in_progress')
       }, 10_000)
       await entry.sdkSession.prompt(message)
       if (timedOut || entry.status === 'error') {
         return
       }
-      this.logger.info('session.prompt_completed', {
+      logger.info({
         sessionId,
         userId: entry.userId,
         elapsedMs: Date.now() - promptStartedAt,
         sdkEventCount,
         firstSdkEventType,
         lastSdkEventType,
-      })
+      }, 'session.prompt_completed')
       entry.status = 'idle'
       this.broadcast(entry, 'status', { status: 'idle' })
-      this.logger.info('session.send_completed', {
+      logger.info({
         sessionId,
         userId: entry.userId,
         sessionPath,
         cwd,
         messageLength: message.length,
-      })
+      }, 'session.send_completed')
     } catch (err) {
       if (timedOut) {
         return
       }
       entry.status = 'error'
       const errorMsg = err instanceof Error ? err.message : String(err)
-      this.logger.error('session.prompt_failed', {
+      logger.error({
         sessionId,
         userId: entry.userId,
         elapsedMs: Date.now() - promptStartedAt,
@@ -251,15 +243,16 @@ export class SessionRegistry {
         firstSdkEventType,
         lastSdkEventType,
         errorMessage: errorMsg,
-      })
+      }, 'session.prompt_failed')
       this.broadcast(entry, 'error', { code: 'PROMPT_ERROR', message: errorMsg })
       this.broadcast(entry, 'status', { status: 'error' })
-      this.logger.error('session.send_failed', withError({
+      logger.error({
         sessionId,
         userId: entry.userId,
         sessionPath,
         cwd,
-      }, err))
+        err,
+      }, 'session.send_failed')
     } finally {
       if (progressTimer) {
         clearInterval(progressTimer)
@@ -284,7 +277,7 @@ export class SessionRegistry {
     const entry = this.entries.get(sessionId)
     if (!entry?.sdkSession) return
     await entry.sdkSession.abort()
-    this.logger.info('session.abort_called', { sessionId })
+    logger.info({ sessionId }, 'session.abort_called')
   }
 
   getStatus(sessionId: string): SessionStatus {
@@ -294,16 +287,16 @@ export class SessionRegistry {
   subscribe(sessionId: string, handler: SSEClientHandler): () => void {
     const entry = this.getOrCreateEntry(sessionId)
     entry.sseClients.add(handler)
-    this.logger.debug('session.sse_subscribed', {
+    logger.debug({
       sessionId,
       clientCount: entry.sseClients.size,
-    })
+    }, 'session.sse_subscribed')
     return () => {
       entry.sseClients.delete(handler)
-      this.logger.debug('session.sse_unsubscribed', {
+      logger.debug({
         sessionId,
         clientCount: entry.sseClients.size,
-      })
+      }, 'session.sse_unsubscribed')
     }
   }
 
@@ -322,7 +315,7 @@ export class SessionRegistry {
         entry.sdkSession.abort().catch(() => {})
         entry.status = 'idle'
         this.broadcast(entry, 'status', { status: 'idle' })
-        this.logger.warn('session.force_aborted_on_dispose', { sessionId })
+        logger.warn({ sessionId }, 'session.force_aborted_on_dispose')
       }
       if (entry.timer) {
         clearTimeout(entry.timer)
@@ -364,10 +357,10 @@ export class SessionRegistry {
       entry.sseClients.delete(handler)
     }
     if (failedHandlers.length > 0) {
-      this.logger.warn('session.sse_handler_removed', {
+      logger.warn({
         removedCount: failedHandlers.length,
         remainingCount: entry.sseClients.size,
-      })
+      }, 'session.sse_handler_removed')
     }
   }
 

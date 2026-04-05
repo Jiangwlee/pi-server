@@ -3,15 +3,13 @@ import {
   InMemoryAuthStorageBackend,
   ModelRegistry,
 } from '@mariozechner/pi-coding-agent'
-import type { Logger } from '../logger.js'
-import { createLogger, withError } from '../logger.js'
+import { logger } from '../logger.js'
 
 interface PiProviderOptions {
   authProxyUrl?: string
   authProxyToken?: string
   initialSyncMaxAttempts?: number
   initialSyncRetryMs?: number
-  logger?: Logger
 }
 
 export class PiProvider {
@@ -23,14 +21,12 @@ export class PiProvider {
   private proxyToken: string | null
   private initialSyncMaxAttempts: number
   private initialSyncRetryMs: number
-  private logger: Logger
 
   constructor(options: PiProviderOptions) {
     this.proxyUrl = options.authProxyUrl ?? null
     this.proxyToken = options.authProxyToken ?? null
     this.initialSyncMaxAttempts = Math.max(options.initialSyncMaxAttempts ?? 20, 1)
     this.initialSyncRetryMs = Math.max(options.initialSyncRetryMs ?? 1000, 0)
-    this.logger = options.logger ?? createLogger('info', 'json')
 
     if (this.proxyUrl) {
       this.backend = new InMemoryAuthStorageBackend()
@@ -51,9 +47,7 @@ export class PiProvider {
     // Start periodic sync (30s)
     this.syncInterval = setInterval(() => {
       this.syncFromProxy().catch((err) => {
-        this.logger.warn('pi_provider.sync_failed_retaining_last_good', withError({
-          proxyUrl: this.proxyUrl,
-        }, err))
+        logger.warn({ proxyUrl: this.proxyUrl, err }, 'pi_provider.sync_failed_retaining_last_good')
       })
     }, 30_000)
   }
@@ -69,10 +63,7 @@ export class PiProvider {
     })
 
     if (!res.ok) {
-      this.logger.warn('pi_provider.sync_http_error', {
-        proxyUrl: this.proxyUrl,
-        status: res.status,
-      })
+      logger.warn({ proxyUrl: this.proxyUrl, status: res.status }, 'pi_provider.sync_http_error')
       throw new Error(`Auth proxy returned ${res.status}`)
     }
 
@@ -86,7 +77,7 @@ export class PiProvider {
 
     this.authStorage.reload()
     this.modelRegistry.refresh()
-    this.logger.debug('pi_provider.sync_succeeded', { proxyUrl: this.proxyUrl })
+    logger.debug({ proxyUrl: this.proxyUrl }, 'pi_provider.sync_succeeded')
   }
 
   private async syncFromProxyWithRetry(): Promise<void> {
@@ -96,22 +87,20 @@ export class PiProvider {
       try {
         await this.syncFromProxy()
         if (attempt > 1) {
-          this.logger.info('pi_provider.initial_sync_recovered', {
-            proxyUrl: this.proxyUrl,
-            attempts: attempt,
-          })
+          logger.info({ proxyUrl: this.proxyUrl, attempts: attempt }, 'pi_provider.initial_sync_recovered')
         }
         return
       } catch (err) {
         lastError = err
         const willRetry = attempt < this.initialSyncMaxAttempts
-        this.logger.warn('pi_provider.initial_sync_failed', withError({
+        logger.warn({
           proxyUrl: this.proxyUrl,
           attempt,
           maxAttempts: this.initialSyncMaxAttempts,
           willRetry,
           retryDelayMs: this.initialSyncRetryMs,
-        }, err))
+          err,
+        }, 'pi_provider.initial_sync_failed')
         if (!willRetry) break
         if (this.initialSyncRetryMs > 0) {
           await new Promise((resolve) => setTimeout(resolve, this.initialSyncRetryMs))
