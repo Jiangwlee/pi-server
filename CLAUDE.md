@@ -79,6 +79,24 @@ BrainStorm → Plan → Code → Review → Test → Commit
 - 构建命令: `pnpm build`
 - 开发启动: `pnpm dev:server`
 
+## 开发环境管理（scripts/dev.sh）
+
+```bash
+scripts/dev.sh dev run        # 前台启动 server + frontend（推荐）
+scripts/dev.sh dev start      # 后台启动，日志写 .dev/logs/
+scripts/dev.sh dev stop       # 停止后台进程
+scripts/dev.sh docker run     # docker compose up（前台）
+scripts/dev.sh docker start   # docker compose up -d
+scripts/dev.sh docker stop    # docker compose down
+scripts/dev.sh docker rebuild # 重建镜像并启动
+```
+
+`dev run/start` 自动执行：端口清理 → 环境变量加载 → ui 构建 → 启动 server(:3000) + frontend(:3100)。
+
+**Monorepo 构建依赖链：** `ui → frontend`（frontend 依赖 ui 编译产物）。改了 ui 代码后必须重新 `dev run`，不能只刷新浏览器。脚本已内置此顺序。
+
+**环境变量：** 首次运行自动生成 `.env.dev`（含 SESSION_SECRET），后续可手动编辑。
+
 ## 完成标准
 
 提交前必须全部通过：

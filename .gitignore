@@ -9,6 +9,10 @@ data/
 .claude/
 AGENTS.md
 
+# dev environment
+.env.dev
+.dev/
+
 # monorepo build outputs
 packages/*/dist/
 packages/frontend/.next/

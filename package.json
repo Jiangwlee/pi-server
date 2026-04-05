@@ -8,5 +8,8 @@
     "build:server": "pnpm --filter @pi-server/server build",
     "test:server": "pnpm --filter @pi-server/server test",
     "smoke": "bash scripts/smoke-test.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
