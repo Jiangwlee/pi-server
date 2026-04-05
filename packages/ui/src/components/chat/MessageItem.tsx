@@ -34,17 +34,17 @@ function renderStopReason(message: ChatMessage) {
   return null
 }
 
-export const MessageItem = memo(function MessageItem(
-  {
-    message,
-    className,
-    classNames,
-  }: {
-    message: ChatMessage
-    className?: string
-    classNames?: MessageItemClassNames
-  },
-) {
+export const MessageItem = memo(function MessageItem({
+  message,
+  toolResultsByCallId,
+  className,
+  classNames,
+}: {
+  message: ChatMessage
+  toolResultsByCallId?: Map<string, ChatMessage>
+  className?: string
+  classNames?: MessageItemClassNames
+}) {
   const roleClass = message.role === 'user'
     ? classNames?.user
     : message.role === 'assistant'
@@ -127,10 +127,13 @@ export const MessageItem = memo(function MessageItem(
           )
         }
         if (content.type === 'toolCall') {
+          const result = toolResultsByCallId?.get(content.id)
           return (
             <ToolCallBlock
               key={`${message.id}-toolCall-${index}`}
               toolCall={content}
+              result={result}
+              streaming={message.streaming}
               className={classNames?.toolCallBlock}
             />
           )
