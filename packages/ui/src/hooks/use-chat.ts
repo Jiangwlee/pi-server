@@ -240,12 +240,10 @@ export function useChat(options: UseChatOptions): UseChatResult {
   }, [sessionId])
 
   const loadHistory = useCallback(async (): Promise<void> => {
-    console.log('[useChat] loadHistory called for', sessionId)
     const history = await client.history(sessionId)
     const next = history.messages
       .map((entry, index) => toChatMessage(entry, index))
       .filter((entry): entry is ChatMessage => Boolean(entry))
-    console.log('[useChat] loadHistory got', next.length, 'messages, roles:', next.map(m => m.role))
     setMessages(next)
   }, [client, sessionId])
 
@@ -255,11 +253,9 @@ export function useChat(options: UseChatOptions): UseChatResult {
     setStatus('idle')
     setError(null)
 
-    console.log('[useChat] setting up SSE for session:', sessionId)
     const connection = connect({
       sessionId,
       onEvent: (frame) => {
-        console.log('[useChat] SSE frame:', frame.event, frame.data)
         if (frame.event === 'status') {
           const payload = frame.data as { status?: SessionStatus }
           if (payload.status) {
@@ -294,11 +290,9 @@ export function useChat(options: UseChatOptions): UseChatResult {
               // SDK emits message_start for both user and assistant messages.
               // Only create a streaming placeholder for assistant messages.
               const startMsg = (agentEvent as { message?: { role?: string } }).message
-              console.log('[useChat] message_start role:', startMsg?.role)
               if (startMsg?.role !== 'assistant') break
 
               const msgId = nextId('stream')
-              console.log('[useChat] creating streaming msg:', msgId)
               const prevStreamId = streamMsgRef.current
               streamMsgRef.current = msgId
               setMessages((prev) => {
@@ -327,7 +321,6 @@ export function useChat(options: UseChatOptions): UseChatResult {
             case 'message_update': {
               const evt = agentEvent.assistantMessageEvent
               const currentId = streamMsgRef.current
-              console.log('[useChat] message_update type:', evt?.type, 'currentId:', currentId)
               if (!currentId) break
 
               // Handle done/error at the AssistantMessageEvent level
@@ -402,7 +395,6 @@ export function useChat(options: UseChatOptions): UseChatResult {
             }
 
             case 'agent_end': {
-              console.log('[useChat] agent_end, reloading history')
               // Reload history for authoritative state
               void loadHistory()
               break
@@ -411,7 +403,6 @@ export function useChat(options: UseChatOptions): UseChatResult {
         }
       },
       onError: (err) => {
-        console.error('[useChat] SSE onError:', err)
         const msg = err instanceof Error ? err.message : String(err)
         setError(msg)
       },
@@ -426,7 +417,6 @@ export function useChat(options: UseChatOptions): UseChatResult {
 
   const send = useCallback(async (message: string, options?: { model?: string }): Promise<void> => {
     const text = message.trim()
-    console.log('[useChat] send called, text:', text, 'model:', options?.model)
     if (!text) return
     const optimisticId = nextId('local-user')
     setError(null)
@@ -438,11 +428,8 @@ export function useChat(options: UseChatOptions): UseChatResult {
     }])
 
     try {
-      console.log('[useChat] calling client.send...')
       await client.send(sessionId, { message: text, model: options?.model })
-      console.log('[useChat] client.send succeeded')
     } catch (err) {
-      console.error('[useChat] client.send failed:', err)
       setStatus('error')
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
       if (err instanceof ApiError && err.status === 409) {

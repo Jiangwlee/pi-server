@@ -133,5 +133,17 @@ export function useStreamHighlight(text: string, language?: string): { lines: To
     }
   }, [normalizedLanguage, text])
 
+  // Dispose tokenizer on language change or unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (bundleRef.current) {
+        bundleRef.current.tokenizer.clear()
+        bundleRef.current = null
+        previousTextRef.current = ''
+        tokenBufferRef.current = []
+      }
+    }
+  }, [normalizedLanguage])
+
   return { lines }
 }

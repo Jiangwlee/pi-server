@@ -27,7 +27,7 @@ function parseSSEBlock(block: string): ParsedSSEFrame | null {
   let dataText = ''
   let id: string | undefined
 
-  for (const line of block.split('\n')) {
+  for (const line of block.split(/\r?\n/)) {
     if (!line || line.startsWith(':')) continue
     if (line.startsWith('event:')) {
       event = line.slice('event:'.length).trim()
@@ -116,7 +116,6 @@ export function connectSSE(options: SSEConnectOptions): SSEConnection {
         const reqHeaders: Record<string, string> = { ...headers }
         if (lastEventId) reqHeaders['Last-Event-ID'] = lastEventId
 
-        console.log('[SSE] connecting to', url, 'attempt:', attempt)
         const res = await fetchImpl(url, {
           method: 'GET',
           credentials,
@@ -124,7 +123,6 @@ export function connectSSE(options: SSEConnectOptions): SSEConnection {
           signal: controller.signal,
         })
 
-        console.log('[SSE] response status:', res.status, 'ok:', res.ok, 'hasBody:', !!res.body)
         if (!res.ok || !res.body) {
           throw new Error('Failed to open SSE stream')
         }
@@ -138,10 +136,8 @@ export function connectSSE(options: SSEConnectOptions): SSEConnection {
 
         while (!closed) {
           const { done: streamDone, value } = await reader.read()
-          if (streamDone) { console.log('[SSE] stream done'); break }
-          const chunk = decoder.decode(value, { stream: true })
-          console.log('[SSE] chunk received, length:', chunk.length, 'preview:', chunk.slice(0, 100))
-          pending += chunk
+          if (streamDone) break
+          pending += decoder.decode(value, { stream: true })
           const parsed = consumeSSEBuffer(pending)
           pending = parsed.rest
           for (const frame of parsed.frames) {

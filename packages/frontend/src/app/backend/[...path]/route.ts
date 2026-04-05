@@ -1,48 +1,60 @@
 import type { NextRequest } from 'next/server'
-import { request as httpRequest } from 'node:http'
+import { request as httpRequest, type ClientRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
 
 const PI_SERVER_URL = process.env.PI_SERVER_URL ?? 'http://127.0.0.1:3000'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Stream SSE via Node.js http.request to avoid fetch buffering the response.
+ * Stream SSE via Node.js http/https.request to avoid fetch buffering the response.
+ * Propagates upstream error status codes and cleans up on client disconnect.
  */
 function forwardSSE(request: NextRequest, params: { path: string[] }): Response {
   const targetPath = params.path.join('/')
   const targetUrl = new URL(`${PI_SERVER_URL}/${targetPath}`)
   targetUrl.search = request.nextUrl.search
 
-  console.log('[SSE-proxy] forwardSSE to', targetUrl.href)
+  const requestFn = targetUrl.protocol === 'https:' ? httpsRequest : httpRequest
+  let upstreamReq: ClientRequest | null = null
 
   const stream = new ReadableStream({
     start(controller) {
-      const req = httpRequest(targetUrl, {
+      upstreamReq = requestFn(targetUrl, {
         method: 'GET',
         headers: {
           cookie: request.headers.get('cookie') ?? '',
           'last-event-id': request.headers.get('last-event-id') ?? '',
         },
       }, (res) => {
-        console.log('[SSE-proxy] upstream status:', res.statusCode)
+        if (res.statusCode && res.statusCode !== 200) {
+          // Collect error body and close stream so the client gets a proper error
+          let body = ''
+          res.on('data', (chunk: Buffer) => { body += chunk.toString() })
+          res.on('end', () => {
+            const errorEvent = `event: error\ndata: ${JSON.stringify({ status: res.statusCode, message: body })}\n\n`
+            controller.enqueue(new TextEncoder().encode(errorEvent))
+            controller.close()
+          })
+          return
+        }
         res.on('data', (chunk: Buffer) => {
-          console.log('[SSE-proxy] chunk', chunk.length, 'bytes')
           controller.enqueue(chunk)
         })
         res.on('end', () => {
-          console.log('[SSE-proxy] upstream ended')
           controller.close()
         })
         res.on('error', (err) => {
-          console.error('[SSE-proxy] upstream error:', err)
           controller.error(err)
         })
       })
-      req.on('error', (err) => {
-        console.error('[SSE-proxy] request error:', err)
+      upstreamReq.on('error', (err) => {
         controller.error(err)
       })
-      req.end()
+      upstreamReq.end()
+    },
+    cancel() {
+      upstreamReq?.destroy()
     },
   })
 
