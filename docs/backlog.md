@@ -51,38 +51,199 @@
 
 ---
 
-## pi-webui 对比完整 Gap 清单 (2026-04-05)
+## pi-webui ��比完整 Gap 清单
 
-以下为与 pi-webui 对比后识别的所有 gap，按优先级排序。
+对比基准: `pi-mono/packages/web-ui` (Lit web components, IndexedDB, v0.65.0)
+对比日期: 2026-04-05
+更新日期: 2026-04-05
+
+### 架构差异（设计选择，非 gap）
+
+| 维度 | pi-webui | pi-server |
+|------|----------|-----------|
+| 框架 | Lit web components | React |
+| 存储 | IndexedDB (纯前端) | SQLite (后端持久化) |
+| 认证 | API Key 自管理 | 服务端 session + OAuth |
+| 模型访问 | 直连 provider API | 后端代理 + auth-proxy |
+| 部署 | 静态 SPA | Docker (server + frontend) |
 
 ### 大 Gap
 
-| 功能 | 说明 | 工作量 |
-|------|------|--------|
-| Artifacts 系统 | 9 种 artifact 类型 + sandbox iframe 执行 + 预览/代码切换 | 大 |
-| 文档类文件处理 | PDF/DOCX/XLSX/PPTX 文本提取 + 预览 | 大 |
-| Thinking Level 选择器 | Off/Minimal/Low/Medium/High 5 级 | 小 |
-| 自定义 Provider 管理 | Ollama/vLLM 等自发现 (pi-server 架构可能不需要) | N/A |
-| Tool 渲染器注册表 | 可插拔渲染 + 状态指示 (inprogress/complete/error) | 中 |
+#### Artifacts 系统
+- **pi-webui**: 完整的 ArtifactsPanel + 9 种 artifact 类型
+  - HTML (sandbox iframe 执行 + 预览/代码切换 + console 输出)
+  - SVG, Markdown, Image, Text (语法高亮), PDF, Excel, DOCX, Generic
+  - Artifact tool commands: create/update/rewrite/get/delete/logs
+  - ArtifactPill 浮动计数 badge
+  - 50/50 分屏布局 (桌面) / overlay (移动端, 800px breakpoint)
+  - 每种 artifact 有复制/下载按钮
+  - SandboxedIframe + RuntimeProviders (artifacts/attachments/console/file-download)
+- **pi-server**: ❌ 完全没有
+- **工作量**: 大
+- **参考**: `web-ui/src/tools/artifacts/`
+
+#### 文档类文件处理
+- **pi-webui**: 
+  - PDF: 文本提取 (page markers) + canvas 多页预览 (1.5x scale)
+  - DOCX: docx-preview 库渲染 + 文��提取
+  - XLSX: XLSX 库 + sheet tabs + styled table cells
+  - PPTX: 文本提取 (仅文字，无渲染)
+  - 通用: extract-document tool 返回 XML 格式文本
+  - AttachmentOverlay 全屏查看器: 原始视图 / 提取文本切换
+- **pi-server**: ❌ 仅图片 (JPEG/PNG/GIF/WebP)
+- **工作��**: 大
+- **参考**: `web-ui/src/utils/attachment-utils.ts`, `web-ui/src/dialogs/AttachmentOverlay.ts`
+
+#### Tool 渲染器注册表
+- **pi-webui**: 
+  - 可插拔 renderer registry: `registerToolRenderer(name, renderer)`
+  - 内置渲染器: Bash (命令+输出), Calculate, GetCurrentTime, Artifacts
+  - DefaultRenderer 兜底 (JSON 展开)
+  - 三态显示: inprogress (脉冲动画) / complete / error (颜色区分)
+  - collapsible header 模式
+- **pi-server**: ❌ ToolCallBlock 仅显示 JSON，无状态区分
+- **工作量**: 中
+- **参考**: `web-ui/src/tools/renderer-registry.ts`, `web-ui/src/tools/renderers/`
+
+#### Thinking Level 选择器
+- **pi-webui**: Off/Minimal/Low/Medium/High 5 级下拉
+  - 仅当 model.reasoning === true 时显示
+  - 存储在 session metadata 中
+  - 位于 MessageEditor 左侧按钮区
+- **pi-server**: ❌ 没有
+- **工作量**: 小 (pi SDK 已支持 ThinkingLevel)
+- **前置**: 后端 Model 类型需扩展 reasoning 字段
+- **参考**: `web-ui/src/components/MessageEditor.ts` L236-348
 
 ### 中 Gap
 
-| 功能 | 说明 | 工作量 |
-|------|------|--------|
-| 模型选择器升级 | 见上方详细分析 | 中 |
-| 附件全屏查看 | 图片缩放 + PDF 多页 + 文档预览 | 中 |
-| 拖拽 + 剪贴板粘贴上传 | drag-and-drop + paste image | 小 |
-| Session 元数据丰富 | 消息数、token 用量、费用汇总、预览文本 | 中 |
-| 费用追踪汇总 UI | session 级别费用统计 + 可点击详情 | 小 |
-| i18n 国际化 | 多语言翻译 key 体系 | 中 |
-| 设置面板 | 多 tab 设置对话框 | 中 |
-| Console/输出块 | 颜色区分 + 复制按钮 + 自动滚动 | 小 |
+#### 模型选择器升级
+- **状态**: 有独立分析，见上方 "模型选择器升级" section
+- **工作量**: 中
+
+#### 附件全屏查看
+- **pi-webui**: AttachmentOverlay ��屏 dialog
+  - 图片: 直接显示 + 缩放容器
+  - PDF: canvas 多页渲染
+  - DOCX: docx-preview 渲染
+  - XLSX: sheet tabs + styled table
+  - 模式切换: 原始视图 / 提取文本
+  - 下载按钮 + 关闭 (X / Escape)
+- **pi-server**: ❌ 仅 64px 缩略图，无点击查看
+- **工作量**: 中 (图片先做较简单)
+- **参考**: `web-ui/src/dialogs/AttachmentOverlay.ts`
+
+#### Session 元数据丰富
+- **pi-webui**: SessionListDialog 显示
+  - 标题 (自动取首条消息)
+  - 最后修改日期 (相对: Today/Yesterday/X days ago)
+  - 消息数
+  - 用量统计 (tokens + costs)
+  - 预览文本 (前 2KB)
+  - hover 显示删除按钮 + 确认
+- **pi-server**: 仅 label + updatedAt
+- **工作量**: 中
+
+#### 费用追踪汇总 UI
+- **pi-webui**: 
+  - 每条消息显示 usage (input/output tokens + costs)
+  - session 聚合费用
+  - 可点击 cost 区域触发 onCostClick 回调
+  - formatUsage(): "1.5K in, 2.3K out, $0.005"
+- **pi-server**: 有 Usage 数据但无汇总 UI
+- **工作量**: 小
+- **参考**: `web-ui/src/utils/format.ts`
+
+#### i18n 国际化
+- **pi-webui**: 英/德双语, 200+ 翻译 key
+  - `i18n(key)` 函数 + `setLanguage(lang)`
+  - 覆盖: 编辑器操作、Provider 管理、Artifact 操作、设置、错误消息等
+- **pi-server**: ❌ 硬编码英文
+- **工作量**: 中
+
+#### 设置面板
+- **pi-webui**: SettingsDialog 多 tab
+  - ApiKeysTab: 每 provider key 输入 + test/validate
+  - ProxyTab: CORS proxy toggle + URL
+  - ProvidersModelsTab: 云 + 自定义 provider 配置
+- **pi-server**: ❌ 没有设置 UI (所有配置在环境变量)
+- **工作��**: 中
+- **备注**: pi-server 架构下 API key 由后端管理，设置面板内容不同
+
+#### Console/输出块
+- **pi-webui**: ConsoleBlock 组件
+  - default/error 两种 variant (颜色区分)
+  - 复制按钮 + "Copied!" 反馈
+  - max-height 256px + 自动滚动到底部
+- **pi-server**: ❌ 没有
+- **工作量**: ���
+- **参考**: `web-ui/src/components/ConsoleBlock.ts`
 
 ### 小 Gap
 
-| 功能 | 说明 | 工作量 |
-|------|------|--------|
-| Escape 终止 streaming | 输入框按 Escape 中止 | 极小 |
-| 代码块复制按钮 | 复制 + "Copied!" 反馈 | 小 |
-| Dark/Light 主题切换 UI | 有 CSS 变量但无切换按钮 | 极小 |
-| 图标库 | Lucide 等图标替代文字/emoji | 小 |
+#### Escape 终止 streaming
+- **pi-webui**: MessageEditor `handleKeyDown` 中 `Escape` → `onAbort?.()`
+- **pi-server**: ❌ 仅 Stop 按钮
+- **工作量**: 极小
+- **参考**: `web-ui/src/components/MessageEditor.ts` L62-70
+
+#### 代码块复制按钮
+- **pi-webui**: ConsoleBlock/ArtifactElement 均有复制按钮 + "Copied!" toast
+- **pi-server**: ❌ 没有
+- **工作量**: 小
+
+#### Dark/Light 主题切换 UI
+- **pi-webui**: 内置 toggle (via @mariozechner/mini-lit)
+- **pi-server**: 有 CSS 变量但无切换按���
+- **工作量**: 极小
+
+#### 图标库
+- **pi-webui**: Lucide icons 全套 (Brain, Image, Paperclip, Send, Square, Sparkles, etc.)
+- **pi-server**: ❌ 仅文字/emoji (📎)
+- **工作量**: 小
+
+#### Streaming 消息容器
+- **pi-webui**: 独立 StreamingMessageContainer
+  - requestAnimationFrame 批量更新
+  - deep clone 检测嵌套属性变化
+  - 脉冲动画
+- **pi-server**: 直接在 messages 数组中修改 streaming message
+- **工作量**: 小
+- **备注**: 当前方案功能正确，优化级别差异
+
+#### 智能自动滚动
+- **pi-webui**: AgentInterface
+  - 用户向上滚动时禁用��动滚动
+  - 滚回底部附近时重新启用
+  - ResizeObserver 检测内���变化
+- **pi-server**: ❌ 无自动滚动管理
+- **工作量**: 小
+
+#### 附件缩略图组件
+- **pi-webui**: AttachmentTile
+  - 图片: 16x16 缩略图 + hover 放大
+  - PDF: badge overlay
+  - 文档: 图标 + 截断文件名
+  - hover 显示删除按钮
+  - 点击打开 AttachmentOverlay
+- **pi-server**: AttachmentPreview 64x64 简单缩略图
+- **工作量**: 小
+
+### ✅ 已完成
+
+| 功能 | 完成日期 | commit |
+|------|----------|--------|
+| 图片上传 (后端 + 前端) | 2026-04-05 | `12e6d4a` |
+| 拖拽 + 剪贴板粘贴上传 | 2026-04-05 | `0f5171f` |
+
+### ✅ pi-server 优势（pi-webui 没有的）
+
+| 功能 | 说明 |
+|------|------|
+| 多用户 + 认证 | Email 密码 + GitHub OAuth，服务端 session |
+| 后端文件持久化 | 文件存服务器磁盘，不占浏览器空间 |
+| SSE 断线重连 | 环形缓冲 + Last-Event-ID |
+| Markdown 流式高亮 | Shiki + shiki-stream 双路径 |
+| AuthGuard 路由保护 | 前端路由级认证守卫 |
+| Docker 部署 | 完整的容器化方案 |
+| Session 后端持久化 | SQLite，跨设备可用 |
