@@ -105,6 +105,7 @@ export function ChatPanel(
         value={inputValue}
         onInput={setInputValue}
         onSend={handleSend}
+        onFiles={handleFiles}
         loading={isLoading}
         className={classNames?.composer}
         classNames={{ textarea: classNames?.textarea }}

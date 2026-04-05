@@ -112,4 +112,74 @@ describe('ChatInput', () => {
 
     expect(textarea.style.height).toBe('80px')
   })
+
+  it('calls onFiles when image is pasted', () => {
+    const onFiles = vi.fn()
+    render(<ChatInput value="" onFiles={onFiles} />)
+
+    const textarea = screen.getByRole('textbox')
+    const file = new File(['pixels'], 'photo.png', { type: 'image/png' })
+
+    const clipboardData = {
+      items: [{ type: 'image/png', getAsFile: () => file }],
+    }
+
+    fireEvent.paste(textarea, { clipboardData })
+
+    expect(onFiles).toHaveBeenCalledWith([file])
+  })
+
+  it('does NOT intercept paste when no image in clipboard', () => {
+    const onFiles = vi.fn()
+    render(<ChatInput value="" onFiles={onFiles} />)
+
+    const textarea = screen.getByRole('textbox')
+    const clipboardData = {
+      items: [{ type: 'text/plain', getAsFile: () => null }],
+    }
+
+    fireEvent.paste(textarea, { clipboardData })
+
+    expect(onFiles).not.toHaveBeenCalled()
+  })
+
+  it('calls onFiles when files are dropped', () => {
+    const onFiles = vi.fn()
+    const { container } = render(<ChatInput value="" onFiles={onFiles} />)
+
+    const root = container.firstElementChild!
+    const file = new File(['pixels'], 'photo.png', { type: 'image/png' })
+
+    fireEvent.dragEnter(root, { dataTransfer: { types: ['Files'], files: [] } })
+    fireEvent.drop(root, { dataTransfer: { types: ['Files'], files: [file] } })
+
+    expect(onFiles).toHaveBeenCalledWith([file])
+  })
+
+  it('shows drag overlay during drag and hides after drop', () => {
+    const onFiles = vi.fn()
+    const { container } = render(<ChatInput value="" onFiles={onFiles} />)
+
+    const root = container.firstElementChild!
+
+    // Before drag — no overlay
+    expect(screen.queryByText('Drop files here')).toBeNull()
+
+    // Start drag
+    fireEvent.dragEnter(root, { dataTransfer: { types: ['Files'], files: [] } })
+    expect(screen.getByText('Drop files here')).toBeTruthy()
+
+    // Drop
+    fireEvent.drop(root, { dataTransfer: { types: ['Files'], files: [] } })
+    expect(screen.queryByText('Drop files here')).toBeNull()
+  })
+
+  it('does NOT show drag overlay when onFiles is not provided', () => {
+    const { container } = render(<ChatInput value="" />)
+
+    const root = container.firstElementChild!
+    fireEvent.dragEnter(root, { dataTransfer: { types: ['Files'], files: [] } })
+
+    expect(screen.queryByText('Drop files here')).toBeNull()
+  })
 })
