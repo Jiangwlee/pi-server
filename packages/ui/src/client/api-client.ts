@@ -7,6 +7,7 @@ import type {
   Session,
   SessionHistoryEntry,
   SessionStatus,
+  UploadedFile,
   User,
 } from './types.js'
 
@@ -93,6 +94,29 @@ export class ApiClient {
 
   async models(): Promise<Model[]> {
     return this.request('/api/models', { method: 'GET' })
+  }
+
+  async upload(file: File, sessionId: string): Promise<UploadedFile> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('sessionId', sessionId)
+
+    const res = await fetch(`${this.basePath}/api/files/upload`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new ApiError(res.status, text)
+    }
+
+    return await res.json() as UploadedFile
+  }
+
+  fileUrl(fileId: string, variant: 'thumbnail' | 'original' = 'thumbnail'): string {
+    return `${this.basePath}/api/files/${fileId}/${variant}`
   }
 
   private async request<T>(

@@ -11,13 +11,15 @@ import { loadConfig } from './config.js'
 import { initDb } from './db.js'
 import { UserStore } from './stores/user-store.js'
 import { SessionStore } from './stores/session-store.js'
+import { AttachmentStore } from './stores/attachment-store.js'
 import { authMiddleware } from './auth/middleware.js'
 import { createEmailProtectedAuthRoutes, createEmailPublicAuthRoutes } from './auth/email.js'
 import { createGithubAuthRoutes } from './auth/github.js'
 import { PiProvider } from './runtime/pi-provider.js'
-import { SessionRegistry } from './runtime/session-registry.js'
+import { SessionRegistry, type ImageContent } from './runtime/session-registry.js'
 import { createSessionRoutes } from './routes/sessions.js'
 import { createRuntimeRoutes } from './routes/runtime.js'
+import { createFileRoutes } from './routes/files.js'
 import { createModelRoutes } from './routes/models.js'
 import { initLogger, logger } from './logger.js'
 import { createRequestLoggerMiddleware } from './http/request-logger.js'
@@ -71,6 +73,7 @@ if (config.authServer) {
   const db = initDb(dbPath)
   const userStore = new UserStore(db)
   const sessionStore = new SessionStore(db)
+  const attachmentStore = new AttachmentStore(db)
 
   // Initialize Pi Provider
   const piProvider = new PiProvider({
@@ -93,7 +96,7 @@ if (config.authServer) {
       })
       logger.info({ sessionPath, cwd }, 'sdk.create_agent_session_completed')
       return {
-        prompt: (text: string) => session.prompt(text),
+        prompt: (text: string, images?: ImageContent[]) => session.prompt(text, images ? { images } : undefined),
         setModel: async (provider: string, modelId: string) => {
           const model = modelRegistry.find(provider, modelId)
           if (!model) {
@@ -145,7 +148,8 @@ if (config.authServer) {
 
   // API routes
   app.route('/', createSessionRoutes(sessionStore, registry))
-  app.route('/', createRuntimeRoutes(sessionStore, registry, config.dataDir))
+  app.route('/', createRuntimeRoutes(sessionStore, registry, config.dataDir, attachmentStore))
+  app.route('/', createFileRoutes(attachmentStore, sessionStore, config.dataDir))
   app.route('/', createModelRoutes(piProvider))
 
   // Startup

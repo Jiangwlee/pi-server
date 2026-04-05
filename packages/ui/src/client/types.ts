@@ -34,6 +34,22 @@ export type CreateSessionRequest = {
 export type SendRequest = {
   message: string
   model?: string
+  fileIds?: string[]
+}
+
+export type UploadedFile = {
+  id: string
+  fileName: string
+  mimeType: string
+  size: number
+  thumbnailUrl: string
+}
+
+export type ChatAttachment = {
+  fileId: string
+  fileName: string
+  mimeType: string
+  thumbnailUrl: string
 }
 
 export type SessionStatus = 'idle' | 'running' | 'error'
@@ -133,6 +149,7 @@ export type ChatMessage = {
   toolName?: string
   isError?: boolean
   timestamp?: number
+  attachments?: ChatAttachment[]
 }
 
 // --- History entry (loose shape from server JSONL) ---

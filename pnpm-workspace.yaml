@@ -6,3 +6,4 @@ allowBuilds:
   esbuild: true
   koffi: true
   protobufjs: true
+  sharp: true

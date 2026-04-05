@@ -10,7 +10,7 @@ import { UserStore } from '../src/stores/user-store.js'
 import { SessionStore, type Session } from '../src/stores/session-store.js'
 import { authMiddleware } from '../src/auth/middleware.js'
 import { createRuntimeRoutes } from '../src/routes/runtime.js'
-import { SessionRegistry, type SdkSession } from '../src/runtime/session-registry.js'
+import { SessionRegistry, type SdkSession, type ImageContent } from '../src/runtime/session-registry.js'
 import { initLogger } from '../src/logger.js'
 
 const SECRET = 'x'.repeat(32)
@@ -18,7 +18,7 @@ initLogger('error', 'json')
 
 function createHangingSession(): SdkSession {
   return {
-    prompt: vi.fn().mockImplementation(() => new Promise<void>(() => {})),
+    prompt: vi.fn().mockImplementation((_text: string, _images?: ImageContent[]) => new Promise<void>(() => {})),
     abort: vi.fn().mockResolvedValue(undefined),
     subscribe: vi.fn().mockImplementation(() => () => {}),
     dispose: vi.fn(),
@@ -113,7 +113,7 @@ describe('runtime routes /api/sessions/:id/send', () => {
   it('returns 202 when send is accepted', async () => {
     registry = new SessionRegistry({
       createSession: vi.fn().mockResolvedValue({
-        prompt: vi.fn().mockResolvedValue(undefined),
+        prompt: vi.fn().mockImplementation((_text: string, _images?: ImageContent[]) => Promise.resolve()),
         abort: vi.fn().mockResolvedValue(undefined),
         subscribe: vi.fn().mockImplementation(() => () => {}),
         dispose: vi.fn(),

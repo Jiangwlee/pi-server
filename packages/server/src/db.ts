@@ -24,6 +24,21 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+
+CREATE TABLE IF NOT EXISTS attachments (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  session_id TEXT NOT NULL REFERENCES sessions(id),
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  extracted_text TEXT,
+  referenced_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_user_id ON attachments(user_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_session_id ON attachments(session_id);
 `
 
 export function initDb(dbPath: string): Database.Database {

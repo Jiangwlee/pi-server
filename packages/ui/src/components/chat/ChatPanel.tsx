@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useChat } from '../../hooks/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
+import { useFileUpload } from '../../hooks/use-file-upload.js'
 import { ChatInput } from './ChatInput.js'
 import { ChatSendButton } from './ChatSendButton.js'
 import { ModelSelector, getModelOptionValue } from './ModelSelector.js'
+import { FileUploadButton } from './FileUploadButton.js'
+import { AttachmentPreview } from './AttachmentPreview.js'
 import { MessageList } from './MessageList.js'
 
 type ChatPanelClassNames = {
@@ -19,6 +22,8 @@ type ChatPanelClassNames = {
   textarea?: string
   modelSelect?: string
   sendButton?: string
+  uploadButton?: string
+  attachmentPreview?: string
 }
 
 export function ChatPanel(
@@ -34,6 +39,7 @@ export function ChatPanel(
 ) {
   const { messages, status, error, send, abort } = useChat({ sessionId })
   const { models, loadModels } = useModels()
+  const fileUpload = useFileUpload({ sessionId })
   const [selectedModelId, setSelectedModelId] = useState<string>('')
   const [inputValue, setInputValue] = useState('')
 
@@ -53,9 +59,28 @@ export function ChatPanel(
   const handleSend = useCallback(() => {
     const trimmed = inputValue.trim()
     if (!trimmed) return
-    void send(trimmed, selectedModelId ? { model: selectedModelId } : undefined)
+    const attachments = fileUpload.files.length > 0
+      ? fileUpload.files.map((f) => ({
+        fileId: f.id,
+        fileName: f.fileName,
+        mimeType: f.mimeType,
+        thumbnailUrl: f.thumbnailUrl,
+      }))
+      : undefined
+    void send(trimmed, {
+      ...(selectedModelId ? { model: selectedModelId } : {}),
+      ...(fileUpload.fileIds.length > 0 ? { fileIds: fileUpload.fileIds } : {}),
+      ...(attachments ? { attachments } : {}),
+    })
     setInputValue('')
-  }, [inputValue, selectedModelId, send])
+    fileUpload.clear()
+  }, [inputValue, selectedModelId, send, fileUpload])
+
+  const handleFiles = useCallback((files: File[]) => {
+    for (const file of files) {
+      void fileUpload.upload(file)
+    }
+  }, [fileUpload])
 
   const handleStop = useCallback(() => {
     void abort()
@@ -83,6 +108,13 @@ export function ChatPanel(
         loading={isLoading}
         className={classNames?.composer}
         classNames={{ textarea: classNames?.textarea }}
+        topAddons={
+          <AttachmentPreview
+            files={fileUpload.files}
+            onRemove={fileUpload.remove}
+            className={classNames?.attachmentPreview}
+          />
+        }
         bottomAddons={
           <ChatSendButton
             loading={isLoading}
@@ -90,12 +122,19 @@ export function ChatPanel(
             onStop={handleStop}
             classNames={{ button: classNames?.sendButton }}
             leftAddons={
-              <ModelSelector
-                models={models}
-                value={selectedModelId}
-                onChange={setSelectedModelId}
-                classNames={{ select: classNames?.modelSelect }}
-              />
+              <>
+                <FileUploadButton
+                  onFiles={handleFiles}
+                  disabled={isLoading || fileUpload.uploading}
+                  className={classNames?.uploadButton}
+                />
+                <ModelSelector
+                  models={models}
+                  value={selectedModelId}
+                  onChange={setSelectedModelId}
+                  classNames={{ select: classNames?.modelSelect }}
+                />
+              </>
             }
           />
         }
@@ -103,6 +142,7 @@ export function ChatPanel(
       <footer className={classNames?.footer}>
         <span>Status: {status}</span>
         {error ? <span>Error: {error}</span> : null}
+        {fileUpload.error ? <span>Upload error: {fileUpload.error}</span> : null}
       </footer>
     </section>
   )

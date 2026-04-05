@@ -9,8 +9,14 @@ export type SSEEnvelope = {
 
 export type SSEClientHandler = (envelope: SSEEnvelope) => void
 
+export type ImageContent = {
+  type: 'image'
+  data: string
+  mimeType: string
+}
+
 export type SdkSession = {
-  prompt: (text: string) => Promise<void>
+  prompt: (text: string, images?: ImageContent[]) => Promise<void>
   setModel: (provider: string, modelId: string) => Promise<void>
   abort: () => Promise<void>
   subscribe: (listener: (event: unknown) => void) => () => void
@@ -70,6 +76,7 @@ export class SessionRegistry {
     cwd: string,
     message: string,
     model?: { provider: string; modelId: string },
+    images?: ImageContent[],
   ): Promise<void> {
     const entry = this.getOrCreateEntry(sessionId)
 
@@ -95,7 +102,7 @@ export class SessionRegistry {
     logger.info({ sessionId, userId }, 'session.send_started')
     this.broadcast(entry, 'status', { status: 'running' })
 
-    return this.runSend(entry, sessionId, sessionPath, cwd, message, model)
+    return this.runSend(entry, sessionId, sessionPath, cwd, message, model, images)
   }
 
   private async runSend(
@@ -105,6 +112,7 @@ export class SessionRegistry {
     cwd: string,
     message: string,
     model?: { provider: string; modelId: string },
+    images?: ImageContent[],
   ): Promise<void> {
     const promptStartedAt = Date.now()
     let sdkEventCount = 0
@@ -197,6 +205,7 @@ export class SessionRegistry {
         sessionId,
         userId: entry.userId,
         messageLength: message.length,
+        imageCount: images?.length ?? 0,
       }, 'session.prompt_started')
       progressTimer = setInterval(() => {
         logger.info({
@@ -208,7 +217,7 @@ export class SessionRegistry {
           lastSdkEventType,
         }, 'session.prompt_in_progress')
       }, 10_000)
-      await entry.sdkSession.prompt(message)
+      await entry.sdkSession.prompt(message, images)
       if (timedOut || entry.status === 'error') {
         return
       }
@@ -228,6 +237,7 @@ export class SessionRegistry {
         sessionPath,
         cwd,
         messageLength: message.length,
+        imageCount: images?.length ?? 0,
       }, 'session.send_completed')
     } catch (err) {
       if (timedOut) {

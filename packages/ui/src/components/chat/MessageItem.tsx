@@ -15,6 +15,8 @@ export type MessageItemClassNames = {
   thinkingBlock?: string
   toolCallBlock?: string
   imageBlock?: string
+  attachments?: string
+  attachmentThumbnail?: string
 }
 
 function renderUsage(message: ChatMessage) {
@@ -58,6 +60,28 @@ export const MessageItem = memo(function MessageItem(
       .join('')
     return (
       <div className={rootClassName}>
+        {message.attachments && message.attachments.length > 0 ? (
+          <div
+            className={classNames?.attachments}
+            style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}
+          >
+            {message.attachments.map((att) => (
+              <img
+                key={att.fileId}
+                src={att.thumbnailUrl}
+                alt={att.fileName}
+                className={classNames?.attachmentThumbnail}
+                style={{
+                  width: 64,
+                  height: 64,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                  border: '1px solid rgba(128, 128, 128, 0.2)',
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
         <TextBlock
           content={{ type: 'text', text: userText }}
           streaming={message.streaming}

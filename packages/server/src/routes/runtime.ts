@@ -2,7 +2,9 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import type { SessionStore } from '../stores/session-store.js'
 import type { SessionRegistry } from '../runtime/session-registry.js'
+import type { AttachmentStore } from '../stores/attachment-store.js'
 import { resolveSessionPath, resolveWorkspacePath, ensureDirs } from '../runtime/path-resolver.js'
+import { resolveFileIdsToImages, MAX_FILE_IDS_PER_SEND } from './files.js'
 import { readFileSync } from 'node:fs'
 import { logger } from '../logger.js'
 import '../auth/types.js'
@@ -11,6 +13,7 @@ export function createRuntimeRoutes(
   sessionStore: SessionStore,
   registry: SessionRegistry,
   dataDir: string,
+  attachmentStore?: AttachmentStore,
 ): Hono {
   const app = new Hono()
 
@@ -31,7 +34,7 @@ export function createRuntimeRoutes(
   app.post('/api/sessions/:id/send', async (c) => {
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
-    const body = await c.req.json<{ message: string; model?: string }>()
+    const body = await c.req.json<{ message: string; model?: string; fileIds?: string[] }>()
 
     if (!body.message || !body.message.trim()) {
       return c.json({ error: 'message is required' }, 400)
@@ -41,9 +44,26 @@ export function createRuntimeRoutes(
       return c.json({ error: 'model must be in provider:modelId format' }, 400)
     }
 
+    // Validate fileIds
+    const fileIds = body.fileIds ?? []
+    if (fileIds.length > MAX_FILE_IDS_PER_SEND) {
+      return c.json({ error: `Too many files: ${fileIds.length}. Max: ${MAX_FILE_IDS_PER_SEND}` }, 400)
+    }
+
     const session = getOwnedSession(userId, sessionId)
     if (!session) {
       return c.json({ error: 'Session not found' }, 404)
+    }
+
+    // Resolve file attachments to ImageContent
+    let images: { type: 'image'; data: string; mimeType: string }[] | undefined
+    if (fileIds.length > 0 && attachmentStore) {
+      try {
+        images = await resolveFileIdsToImages(fileIds, userId, attachmentStore, dataDir)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return c.json({ error: msg }, 400)
+      }
     }
 
     const sessionPath = resolveSessionPath(dataDir, userId, session.sessionDir)
@@ -52,7 +72,7 @@ export function createRuntimeRoutes(
 
     try {
       // Fire and forget — client listens via SSE
-      registry.send(sessionId, userId, sessionPath, workspacePath, body.message, model)
+      registry.send(sessionId, userId, sessionPath, workspacePath, body.message, model, images)
         .catch((err) => {
           logger.error({
             requestId: c.get('requestId'),
