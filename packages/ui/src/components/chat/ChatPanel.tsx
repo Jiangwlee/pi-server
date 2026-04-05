@@ -56,7 +56,8 @@ export function ChatPanel(
 
   useEffect(() => {
     if (!selectedModelId && models.length > 0) {
-      setSelectedModelId(getModelOptionValue(models[0]))
+      const preferred = models.find((m) => m.id === 'gpt-5.4-mini')
+      setSelectedModelId(getModelOptionValue(preferred ?? models[0]))
     }
   }, [models, selectedModelId])
 
