@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getModelOptionLabel, getModelOptionValue } from '../../src/components/chat/ChatPanel.js'
+import { getModelOptionLabel, getModelOptionValue } from '../../src/components/chat/ModelSelector.js'
 
 describe('ChatPanel model option helpers', () => {
   it('includes provider in option value and label when present', () => {

@@ -1,5 +1,7 @@
 export * from './ChatInput.js'
 export * from './ChatSendButton.js'
+export * from './ModelSelector.js'
+export * from './ChatPanel.js'
 export * from './MessageItem.js'
 export * from './MessageList.js'
 export * from './TextBlock.js'

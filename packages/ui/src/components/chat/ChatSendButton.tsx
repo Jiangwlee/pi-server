@@ -43,7 +43,7 @@ const ChatSendButtonImpl = function ChatSendButton(
       className={[classNames?.root, className].filter(Boolean).join(' ')}
       style={{
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
         gap: 8,
         padding: '0 12px',

@@ -80,12 +80,8 @@ export const ChatInput = memo(function ChatInput(
   }, [loading, disabled, onSend])
 
   return (
-    <div
-      className={[classNames?.root, className].filter(Boolean).join(' ')}
-      style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-    >
+    <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
       {topAddons ? <div className={classNames?.topAddons}>{topAddons}</div> : null}
-
       <textarea
         ref={setTextareaRef}
         className={classNames?.textarea}
@@ -97,18 +93,6 @@ export const ChatInput = memo(function ChatInput(
         placeholder={placeholder}
         disabled={disabled}
         rows={minRows}
-        style={{
-          resize: 'none',
-          overflowY: 'auto',
-          lineHeight: 1.5,
-          width: '100%',
-          boxSizing: 'border-box',
-          border: 'none',
-          outline: 'none',
-          background: 'transparent',
-          font: 'inherit',
-          padding: '8px 12px',
-        }}
       />
 
       {bottomAddons ? <div className={classNames?.bottomAddons}>{bottomAddons}</div> : null}

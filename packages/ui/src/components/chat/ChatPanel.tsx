@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useChat } from '../../hooks/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
-import type { Model } from '../../client/types.js'
 import { ChatInput } from './ChatInput.js'
 import { ChatSendButton } from './ChatSendButton.js'
+import { ModelSelector, getModelOptionValue } from './ModelSelector.js'
 import { MessageList } from './MessageList.js'
 
 type ChatPanelClassNames = {
@@ -19,17 +19,6 @@ type ChatPanelClassNames = {
   textarea?: string
   modelSelect?: string
   sendButton?: string
-}
-
-export function getModelOptionValue(model: Model): string {
-  if (model.provider) return `${model.provider}:${model.id}`
-  return model.id
-}
-
-export function getModelOptionLabel(model: Model): string {
-  const display = model.name ?? model.id
-  if (model.provider) return `${model.provider} / ${display}`
-  return display
 }
 
 export function ChatPanel(
@@ -94,34 +83,25 @@ export function ChatPanel(
         loading={isLoading}
         className={classNames?.composer}
         classNames={{ textarea: classNames?.textarea }}
-        topAddons={
-          models.length > 0 ? (
-            <select
-              className={classNames?.modelSelect}
-              value={selectedModelId}
-              onChange={(event) => setSelectedModelId(event.target.value)}
-            >
-              {models.map((model) => (
-                <option key={getModelOptionValue(model)} value={getModelOptionValue(model)}>
-                  {getModelOptionLabel(model)}
-                </option>
-              ))}
-            </select>
-          ) : null
-        }
         bottomAddons={
           <ChatSendButton
             loading={isLoading}
             onSend={handleSend}
             onStop={handleStop}
             classNames={{ button: classNames?.sendButton }}
+            leftAddons={
+              <ModelSelector
+                models={models}
+                value={selectedModelId}
+                onChange={setSelectedModelId}
+                classNames={{ select: classNames?.modelSelect }}
+              />
+            }
           />
         }
       />
       <footer className={classNames?.footer}>
         <span>Status: {status}</span>
-        <span>Models: {models.length}</span>
-        {selectedModelId ? <span>Selected: {selectedModelId}</span> : null}
         {error ? <span>Error: {error}</span> : null}
       </footer>
     </section>
