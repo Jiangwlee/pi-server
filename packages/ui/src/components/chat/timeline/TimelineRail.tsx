@@ -3,20 +3,26 @@
  * Matches Onyx's TimelineIconColumn layout.
  */
 import { memo } from 'react'
-import type { ToolRenderState } from '../../../tools/types.js'
-import { StateIcon } from '../../../tools/index.js'
+import type { ToolRenderState } from '../tools/types.js'
+import { StateIcon } from '../tools/index.js'
 
 export interface TimelineRailProps {
   state: ToolRenderState
   isFirst?: boolean
   isLast?: boolean
+  isHover?: boolean
 }
 
 export const TimelineRail = memo(function TimelineRail({
   state,
   isFirst,
   isLast,
+  isHover,
 }: TimelineRailProps) {
+  const connectorColor = isHover
+    ? 'var(--tl-border-04, #808080)'
+    : 'var(--tl-border-01, #e6e6e6)'
+
   return (
     <div
       className="relative flex flex-col items-center w-[var(--tl-rail-width)]"
@@ -29,7 +35,7 @@ export const TimelineRail = memo(function TimelineRail({
           className="w-px"
           style={{
             height: 'calc(var(--tl-step-top-padding) * 2)',
-            backgroundColor: isFirst ? 'transparent' : 'var(--tl-border-01, #e6e6e6)',
+            backgroundColor: isFirst ? 'transparent' : connectorColor,
           }}
           data-testid="rail-top-connector"
           data-visible={!isFirst}
@@ -43,19 +49,19 @@ export const TimelineRail = memo(function TimelineRail({
           }}
           data-testid="rail-icon"
         >
-          <StateIcon state={state} />
+          <StateIcon state={state} isHover={isHover} />
         </div>
         {/* Bottom connector within header row */}
         <div
           className="w-px flex-1"
-          style={{ backgroundColor: 'var(--tl-border-01, #e6e6e6)' }}
+          style={{ backgroundColor: connectorColor }}
         />
       </div>
       {/* Bottom connector extending to next step */}
       {!isLast && (
         <div
           className="w-px flex-1"
-          style={{ backgroundColor: 'var(--tl-border-01, #e6e6e6)' }}
+          style={{ backgroundColor: connectorColor }}
           data-testid="rail-bottom-connector"
           data-visible={!isLast}
         />

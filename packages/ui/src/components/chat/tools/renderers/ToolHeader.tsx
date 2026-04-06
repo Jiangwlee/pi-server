@@ -44,28 +44,31 @@ export const ToolHeader = memo(function ToolHeader({
 export function StateIcon({
   state,
   className,
-  size = 12,
+  isHover = false,
 }: {
   state: ToolRenderState
   className?: string
-  size?: number
+  isHover?: boolean
 }) {
+  const iconSize = 'var(--tl-icon-size, 0.75rem)'
   const style: React.CSSProperties = {
-    width: size,
-    height: size,
+    width: iconSize,
+    height: iconSize,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     color: state === 'error'
       ? 'var(--danger, #ef4444)'
-      : 'var(--tl-text-02, rgba(0,0,0,0.45))',
+      : isHover
+        ? 'var(--tl-text-04, rgba(0,0,0,0.75))'
+        : 'var(--tl-text-02, rgba(0,0,0,0.45))',
   }
 
   if (state === 'error') {
     return (
       <span className={className} style={style}>
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+        <svg width={iconSize} height={iconSize} viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
           <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
@@ -76,7 +79,7 @@ export function StateIcon({
   if (state === 'complete') {
     return (
       <span className={className} style={style}>
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+        <svg width={iconSize} height={iconSize} viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
           <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -87,7 +90,7 @@ export function StateIcon({
   // inprogress — dashed circle
   return (
     <span className={className} style={style}>
-      <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <svg width={iconSize} height={iconSize} viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
       </svg>
     </span>

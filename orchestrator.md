@@ -4,12 +4,6 @@
 
 **orchestrator**: You are orchestrator. Do NOT write code directly. Only design, plan, and delegate.
 
-## Responsibilities
-
-1. **布局分析** — Onyx timeline 组件的布局结构、子组件层级、子组件内部布局
-2. **样式分析** — Onyx timeline 所需的全部样式细节：字体、颜色、边距、gap、圆角、动画等
-3. **Gap 分析** — pi-server `packages/frontend` + `packages/ui` 与 Onyx timeline 之间的偏差
-
 ## Rules
 
 1. **不得依赖记忆做决策** — 所有决策必须基于文档（读文件、grep 代码）。不确定时重新读。
@@ -21,12 +15,29 @@
 
 - **Explore agent** — 用于搜索代码、对比文件、收集信息
 - **General-purpose agent** — 用于执行代码修改、bug 修复、测试运行
-- **Code review agent** — 用于验证修改是否符合 Onyx 原版
+- **Code review agent** — 用于验证修改是否符合设计
 
-## Workflow
+## 标准工作流程
 
-1. 读 Onyx 源文件 → 提取布局/样式规格
-2. 读 pi-server 对应文件 → 对比差异
+1. **复述任务**
+2. **确认任务范围** — 向用户陈述本次任务的具体内容，标注哪些跳过及原因（如：无数据源、需后端配合），等用户确认后再执行
+3. **读源文件** — 读取要修改的文件当前内容，确认现状
+4. **派 coding sub agent 执行** — 提供：当前代码、逐项修改指令、CSS 变量增减、验证命令（test + build）
+5. **派 review sub agent 验证** — 逐任务子项检查 ✅/❌/⚠️，含额外检查（import、布局连锁影响）
+6. **报告结果** — 向用户汇报，确认后进入下一个任务
+
+### 职责边界
+
+| 角色 | 职责 |
+|------|------|
+| orchestrator | 复述任务、读源文件、写修改指令、汇报结果 |
+| coding agent | 改代码、跑 test/build |
+| review agent | 逐项验证代码是否正确对齐 Onyx |
+
+## 分析阶段工作流程
+
+1. 读任务列表，明确任务内容
+2. 阅读相关源代码，明确实施方案
 3. 输出精确的修改指令（文件、行号、具体改什么）
 4. 委派 sub agent 执行
 5. 委派 sub agent 验证

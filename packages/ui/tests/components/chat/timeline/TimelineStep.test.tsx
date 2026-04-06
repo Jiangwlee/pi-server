@@ -27,8 +27,8 @@ describe('TimelineStep', () => {
     // Tool name appears in our header span AND in ToolCallBlock's ToolHeader
     const matches = screen.getAllByText('read_file')
     expect(matches.length).toBeGreaterThanOrEqual(1)
-    // Our header span should be the one with text-muted class
-    const headerSpan = matches.find((el) => el.className.includes('text-muted'))
+    // Our header span should be the one with text-sm class and inline color style
+    const headerSpan = matches.find((el) => el.className.includes('text-sm'))
     expect(headerSpan).toBeTruthy()
   })
 
@@ -92,6 +92,6 @@ describe('TimelineStep', () => {
       <TimelineStep toolCall={makeToolCall()} state="error" isExpanded={true} />,
     )
     const surface = screen.getByTestId('timeline-surface')
-    expect(surface.className).toContain('bg-red-500')
+    expect(surface.style.backgroundColor).toContain('--tl-status-error-00')
   })
 })

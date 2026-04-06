@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { ToolTimeline } from '../../../../src/components/chat/timeline/ToolTimeline.js'
 import type { ToolCall, ToolExecution } from '../../../../src/client/types.js'
-import type { ToolStep } from '../../../../src/components/chat/groupMessages.js'
+import type { ToolStep } from '../../../../src/state/group-messages.js'
 
 afterEach(() => {
   cleanup()
@@ -76,6 +76,10 @@ describe('ToolTimeline', () => {
     ])
 
     render(<ToolTimeline steps={steps} toolExecutions={toolExecutions} />)
+    // Default is collapsed, expand first
+    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
+    const btn = screen.getByRole('button', { name: /timeline/i })
+    fireEvent.click(btn)
     const stepEls = screen.getAllByTestId('timeline-step')
     expect(stepEls).toHaveLength(3)
   })
@@ -89,19 +93,21 @@ describe('ToolTimeline', () => {
 
     render(<ToolTimeline steps={steps} toolExecutions={toolExecutions} />)
 
-    expect(screen.getAllByTestId('timeline-step')).toHaveLength(2)
-
-    // Click the outer role="button" div (CompletedHeader root)
-    const headers = screen.getAllByRole('button', { name: /timeline/i })
-    const header = headers[0] // outer div
-    fireEvent.click(header)
+    // Default is collapsed
     expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
 
+    // Click to expand
+    const headers = screen.getAllByRole('button', { name: /timeline/i })
+    const header = headers[0]
     fireEvent.click(header)
     expect(screen.getAllByTestId('timeline-step')).toHaveLength(2)
+
+    // Click to collapse
+    fireEvent.click(header)
+    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
   })
 
-  it('auto-collapses when streaming ends if user has not toggled', () => {
+  it('stays collapsed when streaming ends if user has not toggled', () => {
     const steps = [makeStep('bash', 'tc-1')]
     const streamingExecs = new Map([
       ['tc-1', makeExec('tc-1', 'bash', 'inprogress')],
@@ -111,6 +117,31 @@ describe('ToolTimeline', () => {
       <ToolTimeline steps={steps} toolExecutions={streamingExecs} />,
     )
 
+    // Default collapsed
+    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
+
+    const completedExecs = new Map([
+      ['tc-1', makeExec('tc-1', 'bash', 'complete')],
+    ])
+    rerender(<ToolTimeline steps={steps} toolExecutions={completedExecs} />)
+
+    // Still collapsed after streaming ends
+    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
+  })
+
+  it('does NOT auto-collapse when user has manually expanded', () => {
+    const steps = [makeStep('bash', 'tc-1')]
+    const streamingExecs = new Map([
+      ['tc-1', makeExec('tc-1', 'bash', 'inprogress')],
+    ])
+
+    const { rerender } = render(
+      <ToolTimeline steps={steps} toolExecutions={streamingExecs} />,
+    )
+
+    // User manually expands
+    const btn = screen.getByRole('button', { name: /timeline/i })
+    fireEvent.click(btn)
     expect(screen.getAllByTestId('timeline-step')).toHaveLength(1)
 
     const completedExecs = new Map([
@@ -118,28 +149,7 @@ describe('ToolTimeline', () => {
     ])
     rerender(<ToolTimeline steps={steps} toolExecutions={completedExecs} />)
 
-    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
-  })
-
-  it('does NOT auto-collapse when user has manually toggled', () => {
-    const steps = [makeStep('bash', 'tc-1')]
-    const streamingExecs = new Map([
-      ['tc-1', makeExec('tc-1', 'bash', 'inprogress')],
-    ])
-
-    const { rerender } = render(
-      <ToolTimeline steps={steps} toolExecutions={streamingExecs} />,
-    )
-
-    const btn = screen.getByRole('button', { name: /timeline/i })
-    fireEvent.click(btn)
-    fireEvent.click(btn)
-
-    const completedExecs = new Map([
-      ['tc-1', makeExec('tc-1', 'bash', 'complete')],
-    ])
-    rerender(<ToolTimeline steps={steps} toolExecutions={completedExecs} />)
-
+    // Stays expanded because user toggled
     expect(screen.getAllByTestId('timeline-step')).toHaveLength(1)
   })
 })

@@ -2,7 +2,7 @@
  * CompletedHeader — matches Onyx's CompletedHeader layout.
  * "Thought for Xs" text + "N steps" tertiary button with fold/expand icon.
  */
-import { memo } from 'react'
+import { memo, useEffect } from 'react'
 
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} seconds`
@@ -34,11 +34,13 @@ export const CompletedHeader = memo(function CompletedHeader({
   durationSeconds,
   isExpanded,
   onToggle,
+  collapsible = true,
 }: {
   totalSteps: number
   durationSeconds: number
   isExpanded: boolean
   onToggle: () => void
+  collapsible?: boolean
 }) {
   const durationText = durationSeconds > 0
     ? `Thought for ${formatDuration(durationSeconds)}`
@@ -47,38 +49,57 @@ export const CompletedHeader = memo(function CompletedHeader({
   const stepsLabel = `${totalSteps} ${totalSteps === 1 ? 'step' : 'steps'}`
 
   return (
+    <>
+    <TlStyles />
     <div
       role="button"
-      tabIndex={0}
       onClick={onToggle}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onToggle()
-        }
-      }}
-      className="flex items-center justify-between w-full cursor-pointer select-none"
+      className="flex items-center justify-between h-full"
       aria-expanded={isExpanded}
       aria-label={isExpanded ? 'Collapse timeline' : 'Expand timeline'}
     >
       <div className="flex items-center gap-2 px-[var(--tl-header-text-px)] py-[var(--tl-header-text-py)]">
-        <span className="text-sm text-muted">
+        <span
+          className="text-sm font-semibold"
+          style={{ color: 'var(--tl-text-03, rgba(0,0,0,0.55))' }}
+        >
           {durationText}
         </span>
       </div>
-      <button
-        type="button"
-        className="flex items-center gap-1 text-xs text-muted/60 hover:text-muted px-1.5 py-0.5 rounded transition-colors cursor-pointer border-none bg-transparent"
-        onClick={(e) => {
-          e.stopPropagation()
-          onToggle()
-        }}
-        aria-label={isExpanded ? 'Collapse timeline' : 'Expand timeline'}
-        aria-expanded={isExpanded}
-      >
-        <span>{stepsLabel}</span>
-        {isExpanded ? <FoldIcon /> : <ExpandIcon />}
-      </button>
+      {collapsible && (
+        <button
+          type="button"
+          className="tl-btn-tertiary flex items-center gap-1 p-1 rounded-lg transition-colors border-none bg-transparent"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle()
+          }}
+          aria-label={isExpanded ? 'Collapse timeline' : 'Expand timeline'}
+          aria-expanded={isExpanded}
+        >
+          <span>{stepsLabel}</span>
+          {isExpanded ? <FoldIcon /> : <ExpandIcon />}
+        </button>
+      )}
     </div>
+    </>
   )
 })
+
+function TlStyles() {
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const styleId = 'tl-shimmer-keyframes'
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style')
+      style.id = styleId
+      style.textContent = [
+        '@keyframes tl-shimmer { 0% { background-position: 100% 0 } 100% { background-position: -100% 0 } }',
+        '.tl-btn-tertiary { color: var(--tl-text-03, rgba(0,0,0,0.55)); }',
+        '.tl-btn-tertiary:hover { color: var(--tl-text-04, rgba(0,0,0,0.75)); background-color: var(--tl-bg-tint-02, #f0f0f1); }',
+      ].join('\n')
+      document.head.appendChild(style)
+    }
+  }, [])
+  return null
+}

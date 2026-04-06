@@ -6,8 +6,8 @@
  */
 import { memo, useState, useRef, useEffect } from 'react'
 import type { ToolExecution } from '../../../client/types.js'
-import type { ToolStep } from '../groupMessages.js'
-import { resolveToolState } from '../../../tools/index.js'
+import type { ToolStep } from '../../../state/group-messages.js'
+import { resolveToolState } from '../../../state/resolve-tool-state.js'
 import { getTimelineStyles } from './tokens.js'
 import { TimelineHeaderRow } from './TimelineHeaderRow.js'
 import { StreamingHeader } from './StreamingHeader.js'
@@ -33,7 +33,7 @@ export const ToolTimeline = memo(function ToolTimeline({
   streaming,
   classNames,
 }: ToolTimelineProps) {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
   const userToggledRef = useRef(false)
   const prevStreamingRef = useRef<boolean | undefined>(undefined)
 
@@ -108,7 +108,7 @@ export const ToolTimeline = memo(function ToolTimeline({
       </TimelineHeaderRow>
 
       {isExpanded && (
-        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+        <div>
           {steps.map((step, i) => {
             const execution = toolExecutions?.get(step.toolCall.id)
             const result = execution?.partialResult ?? step.result

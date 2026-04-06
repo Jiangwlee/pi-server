@@ -57,6 +57,11 @@
   --tl-bg-tint-00: rgba(0, 0, 0, 0.02);    /* surface background */
   --shimmer-base: #a3a3a3;
   --shimmer-highlight: #000000;
+  --tl-text-03: rgba(0, 0, 0, 0.55);
+  --tl-bg-tint-02: #f0f0f1;
+  --tl-border-04: #808080;
+  --tl-status-error-00: #fef7f6;
+  --tl-status-error-05: #dc2626;
 
   /* ── Scrollbar ───────────────────────────────────────────────────────── */
   --scrollbar-thumb: rgba(0, 0, 0, 0.15);
@@ -108,6 +113,11 @@
   --tl-bg-tint-00: rgba(255, 255, 255, 0.03);
   --shimmer-base: #5c5c5c;
   --shimmer-highlight: #ffffff;
+  --tl-text-03: rgba(255, 255, 255, 0.60);
+  --tl-bg-tint-02: #26262b;
+  --tl-border-04: #b2b2b2;
+  --tl-status-error-00: #210504;
+  --tl-status-error-05: #dc2626;
 
   --scrollbar-thumb: rgba(255, 255, 255, 0.12);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);

@@ -52,7 +52,7 @@ export const DoneStep = memo(function DoneStep() {
         style={{ backgroundColor: 'var(--tl-bg-tint-00, rgba(0,0,0,0.02))' }}
       >
         <div className="flex items-center h-[var(--tl-step-header-height)] pl-2">
-          <span className="text-xs" style={{ color: 'var(--tl-text-02, rgba(0,0,0,0.45))' }}>Done</span>
+          <span className="text-sm" style={{ color: 'var(--tl-text-04, rgba(0,0,0,0.75))' }}>Done</span>
         </div>
       </div>
     </div>
