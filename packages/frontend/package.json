@@ -12,7 +12,8 @@
     "@pi-server/ui": "workspace:*",
     "next": "^15.5.4",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",

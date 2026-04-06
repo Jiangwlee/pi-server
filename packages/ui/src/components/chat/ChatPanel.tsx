@@ -165,13 +165,13 @@ export function ChatPanel(
                   models={models}
                   value={selectedModelId}
                   onChange={setSelectedModelId}
-                  classNames={{ select: classNames?.modelSelect }}
+                  className={classNames?.modelSelect}
                 />
                 <ThinkingLevelSelector
                   value={thinkingLevel}
                   onChange={setThinkingLevel}
                   disabled={isLoading}
-                  classNames={{ select: classNames?.thinkingLevelSelect }}
+                  className={classNames?.thinkingLevelSelect}
                 />
               </>
             }
