@@ -9,7 +9,6 @@ export type ThinkingBlockClassNames = {
 }
 
 const defaults = {
-  root: '',
   toggle: 'flex items-center gap-1.5 text-sm text-muted hover:text-primary cursor-pointer border-none bg-transparent font-inherit py-1',
   content: 'whitespace-pre-wrap text-sm text-secondary mt-1 pl-4 border-l-2 border-border',
   duration: 'text-xs text-muted',
@@ -44,6 +43,8 @@ export const ThinkingBlock = memo(function ThinkingBlock(
       }, 1000)
       return () => clearInterval(interval)
     }
+    // Reset so re-streaming starts from zero
+    startTimeRef.current = null
     return undefined
   }, [streaming, startTime])
 

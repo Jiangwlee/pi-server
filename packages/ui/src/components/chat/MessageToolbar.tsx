@@ -14,7 +14,7 @@ export type MessageToolbarProps = {
 }
 
 const defaults = {
-  root: 'flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity',
+  root: 'flex items-center gap-1 mt-1',
   button: 'p-1 text-muted hover:text-primary hover:bg-hover rounded-md cursor-pointer border-none bg-transparent text-xs',
 }
 

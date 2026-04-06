@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import type { ChatMessage } from '../../client/types.js'
 import { MessageItem, type MessageItemClassNames } from './MessageItem.js'
 
-type MessageListClassNames = {
+export type MessageListClassNames = {
   root?: string
   item?: string
   itemWrapper?: string

@@ -93,7 +93,7 @@ export const MessageItem = memo(function MessageItem({
       ? classNames?.assistant
       : classNames?.tool
 
-  const rootClassName = [classNames?.root ?? defaults.root, roleClass, className, message.role === 'assistant' ? 'group' : ''].filter(Boolean).join(' ')
+  const rootClassName = [classNames?.root ?? defaults.root, roleClass, className].filter(Boolean).join(' ')
 
   if (message.role === 'user') {
     const userText = message.content

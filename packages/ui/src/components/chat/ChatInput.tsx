@@ -31,8 +31,6 @@ const defaults = {
   root: 'relative',
   textarea: 'w-full resize-none bg-transparent outline-none text-sm leading-6 px-3 py-2',
   dragOverlay: 'absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-current bg-black/10 pointer-events-none opacity-80',
-  topAddons: '',
-  bottomAddons: '',
 }
 
 export const ChatInput = memo(function ChatInput(
@@ -163,7 +161,7 @@ export const ChatInput = memo(function ChatInput(
           Drop files here
         </div>
       ) : null}
-      {topAddons ? <div className={classNames?.topAddons ?? defaults.topAddons}>{topAddons}</div> : null}
+      {topAddons ? <div className={classNames?.topAddons}>{topAddons}</div> : null}
       <textarea
         ref={setTextareaRef}
         className={classNames?.textarea ?? defaults.textarea}
@@ -178,7 +176,7 @@ export const ChatInput = memo(function ChatInput(
         rows={minRows}
       />
 
-      {bottomAddons ? <div className={classNames?.bottomAddons ?? defaults.bottomAddons}>{bottomAddons}</div> : null}
+      {bottomAddons ? <div className={classNames?.bottomAddons}>{bottomAddons}</div> : null}
     </div>
   )
 })
