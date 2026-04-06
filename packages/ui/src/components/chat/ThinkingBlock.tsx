@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import type { ThinkingContent } from '../../client/types.js'
-import SvgChevronDown from '../icons/SvgChevronDown.js'
+import SvgSparkle from '../icons/SvgSparkle.js'
 
 export type ThinkingBlockClassNames = {
   root?: string
@@ -10,7 +10,7 @@ export type ThinkingBlockClassNames = {
 }
 
 const defaults = {
-  toggle: 'flex items-center gap-1.5 text-sm text-muted hover:text-primary cursor-pointer border-none bg-transparent font-inherit py-1',
+  toggle: 'flex items-center gap-1.5 text-sm text-[var(--tl-text-03,rgba(0,0,0,0.55))] hover:text-[var(--tl-text-04,rgba(0,0,0,0.75))] cursor-pointer border-none bg-transparent font-inherit py-1',
   content: 'whitespace-pre-wrap text-sm text-secondary mt-1 pl-4 border-l-2 border-border',
   duration: 'text-xs text-muted',
 }
@@ -73,11 +73,7 @@ export const ThinkingBlock = memo(function ThinkingBlock(
           </>
         ) : (
           <>
-            <SvgChevronDown
-              size={14}
-              strokeWidth={2}
-              style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 150ms' }}
-            />
+            <SvgSparkle size={14} strokeWidth={1.5} />
             <span>{elapsed > 0 ? `Thought for ${elapsed}s` : 'Thought'}</span>
           </>
         )}
