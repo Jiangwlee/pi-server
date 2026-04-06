@@ -8,6 +8,7 @@
 - [核心概念](#核心概念)
 - [接口定义](#接口定义)
 - [数据流](#数据流)
+- [样式约束](#样式约束)
 - [RenderType 系统](#rendertype-系统)
 - [图标映射](#图标映射)
 - [开发一个 Renderer](#开发一个-renderer)
@@ -31,7 +32,7 @@ icon                     Rail 连接线
 status 文案               展开/折叠状态
 surfaceBackground        hover 状态
 content                  步骤定位（first/last）
-是否可折叠                Turn 级 header（StreamingHeader / CompletedHeader）
+                         Turn 级 header（StreamingHeader / CompletedHeader）
 ```
 
 ## 核心概念
@@ -81,11 +82,6 @@ type ToolRenderMetadata = {
   icon: ComponentType<IconProps> | null   // Rail 图标。null = 不显示图标
   status: string | ReactNode             // Step header 文案
   surfaceBackground?: 'tint' | 'transparent' | 'error'  // 默认 'tint'
-  supportsCollapsible?: boolean          // step 内容是否可折叠
-  // 预留扩展
-  alwaysCollapsible?: boolean            // 始终显示折叠按钮
-  noPaddingRight?: boolean               // 去掉右侧 padding
-  timelineLayout?: 'timeline' | 'content' // 布局模式
 }
 ```
 
@@ -93,11 +89,7 @@ type ToolRenderMetadata = {
 |------|--------|--------|
 | icon | TimelineRail | SvgCircle |
 | status | TimelineStepContent header | toolCall.name |
-| surfaceBackground | TimelineSurface | 'tint' |
-| supportsCollapsible | TimelineStepContent | false |
-| alwaysCollapsible | TimelineStepContent | false |
-| noPaddingRight | TimelineStepContent | false |
-| timelineLayout | TimelineStep | 'timeline' |
+| surfaceBackground | TimelineSurface + TimelineStepContent | 'tint' |
 
 ### ToolRenderResult
 
@@ -106,7 +98,7 @@ Renderer 产出的渲染内容：
 ```typescript
 type ToolRenderResult = {
   content: ReactNode          // 实际渲染的 React 元素
-  custom?: boolean            // true = 直接渲染；false = 包裹在默认 card 容器中
+  custom?: boolean            // 历史字段，所有 renderer 统一使用 true
 }
 ```
 
@@ -114,7 +106,7 @@ type ToolRenderResult = {
 
 ```typescript
 interface ToolRenderer {
-  getMetadata(ctx: ToolRenderContext): ToolRenderMetadata
+  getMetadata?(ctx: ToolRenderContext): ToolRenderMetadata  // 可选，缺省 fallback 到 defaultRenderer
   render(ctx: ToolRenderContext): ToolRenderResult
   supportsRenderType?(renderType: RenderType): boolean
 }
@@ -125,11 +117,9 @@ interface ToolRenderer {
 ```
 ToolTimeline
   └── steps.map(step => {
-        const renderer = getToolRenderer(name) ?? defaultRenderer
-        const ctx = { toolCall, result, state, renderType }
-        const meta = renderer.getMetadata(ctx)
-        const rendered = renderer.render(ctx)
-        return <TimelineStep meta={meta} rendered={rendered} ... />
+        const state = resolveState(...)
+        const meta = getToolMetadata(toolCall, result, state)
+        return <TimelineStep meta={meta} ... />
       })
 
 TimelineStep（纯布局组合器，不做 tool-specific 判断）
@@ -139,9 +129,66 @@ TimelineStep（纯布局组合器，不做 tool-specific 判断）
   │     └── background={meta.surfaceBackground}  ← 替代硬编码 state 判断
   └── TimelineStepContent
         ├── header={meta.status}                  ← 替代硬编码 toolCall.name
-        ├── collapsible={meta.supportsCollapsible}
-        └── rendered.content                      ← render() 产出
+        ├── collapsible（step 自管理折叠状态）
+        └── <ToolCallBlock />                     ← render() 产出
 ```
+
+## 样式约束
+
+以下约束确保所有 renderer 的视觉风格统一。新 renderer 必须遵守。
+
+### 1. 视觉容器由 Timeline 提供，Renderer 不包裹
+
+Timeline 基础设施提供两层统一外观：
+
+- **外层 TimelineSurface**：tint 灰底（`--tl-bg-tint-00`）+ hover 过渡
+- **内层 TimelineStepContent**：header 行 + 白色圆角矩形内容区
+
+```
+TimelineSurface (tint 灰底)
+└── TimelineStepContent
+    ├── Header 行 (meta.status + 折叠按钮)
+    └── Body (px-1 pb-1 外边距)
+        └── 白色圆角矩形 (rounded-lg bg-white p-2.5)
+            └── render() 产出的内容
+```
+
+**Renderer 的 render() 只输出工具特定内容**，不自己包裹 card、border、圆角矩形等容器。白色卡片由 TimelineStepContent 统一提供。所有 renderer 的 `custom` 统一为 `true`。
+
+### 2. surfaceBackground 默认 tint
+
+所有 renderer 非错误状态下使用 `tint`（灰底），错误状态使用 `error`（红底）。
+不要使用 `transparent`，否则会与相邻 step 产生视觉割裂。
+
+```typescript
+surfaceBackground: ctx.state === 'error' ? 'error' : 'tint'
+```
+
+### 3. Header 显示摘要信息，Content 显示详情
+
+- **header（meta.status）**：简短摘要，折叠时可读。例如 bash 的 `$ command`，file 的 `Read path`。
+- **content（render()）**：展开后的详细数据。只包含 header 中没有的信息，不重复 header 内容。
+
+### 4. Step 级折叠由 TimelineStep 管理
+
+- streaming（inprogress）→ 展开
+- 完成（complete/error）→ 自动折叠
+- 用户手动点击可覆盖自动行为
+
+Renderer 不需要自己实现折叠逻辑。
+
+### 5. 文字样式使用 Timeline 令牌
+
+| 用途 | 样式 |
+|------|------|
+| 正文内容 | `text-xs`（12px）、`var(--tl-text-03)` |
+| 错误内容 | `text-xs`、`var(--danger, #ef4444)` |
+| monospace 内容 | `font-mono text-xs leading-relaxed` |
+| header 文案 | `text-sm`（14px）、`var(--tl-text-04)` — 由 TimelineStep 包裹 |
+
+### 6. 不使用 inline style 做视觉布局
+
+优先使用 Tailwind 类名（`flex`、`gap-2`、`text-xs`）。仅在引用 CSS 变量时使用 inline style。
 
 ## RenderType 系统
 
@@ -191,33 +238,37 @@ Renderer 通过 `supportsRenderType(renderType)` 声明支持哪些模式。Time
 
 ### 第 1 步：创建 Renderer 文件
 
-在 `packages/ui/src/components/chat/tools/renderers/` 下新建文件，如 `BashRenderer.tsx`。
+在 `packages/ui/src/components/chat/tools/renderers/` 下新建文件，如 `MyToolRenderer.tsx`。
 
 ### 第 2 步：实现 ToolRenderer 接口
 
 ```typescript
 import type { ToolRenderer, ToolRenderContext, ToolRenderMetadata, ToolRenderResult } from '../types.js'
-import { SvgTerminal } from '../../../icons/index.js'
+import SvgTerminal from '../../../icons/SvgTerminal.js'
 
-export const bashRenderer: ToolRenderer = {
+function MyToolFullView({ ctx }: { ctx: ToolRenderContext }) {
+  // 只渲染工具特定内容，不包裹容器
+  return <pre className="m-0 font-mono text-xs leading-relaxed">{/* ... */}</pre>
+}
+
+function MyToolCompactView({ ctx }: { ctx: ToolRenderContext }) {
+  return <div className="text-xs truncate" style={{ color: 'var(--tl-text-03)' }}>{/* ... */}</div>
+}
+
+export const myToolRenderer: ToolRenderer = {
   getMetadata(ctx: ToolRenderContext): ToolRenderMetadata {
     return {
       icon: SvgTerminal,
-      status: ctx.state === 'inprogress'
-        ? 'Running command...'
-        : ctx.state === 'error'
-          ? 'Command failed'
-          : 'Ran command',
-      surfaceBackground: ctx.state === 'error' ? 'error' : 'tint',
-      supportsCollapsible: true,
+      status: '$ my-command',                                // 简短摘要
+      surfaceBackground: ctx.state === 'error' ? 'error' : 'tint',  // 始终 tint
     }
   },
 
   render(ctx: ToolRenderContext): ToolRenderResult {
     if (ctx.renderType === 'compact') {
-      return { content: <CompactView ctx={ctx} />, custom: true }
+      return { content: <MyToolCompactView ctx={ctx} />, custom: true }
     }
-    return { content: <FullView ctx={ctx} />, custom: false }
+    return { content: <MyToolFullView ctx={ctx} />, custom: true }  // 始终 custom: true
   },
 
   supportsRenderType(renderType) {
@@ -228,12 +279,13 @@ export const bashRenderer: ToolRenderer = {
 
 ### 第 3 步：注册 Renderer
 
-在 `packages/ui/src/components/chat/tools/registry.ts` 中注册：
+在 `packages/ui/src/components/chat/tools/register-builtins.ts` 中注册：
 
 ```typescript
-import { bashRenderer } from './renderers/BashRenderer.js'
+import { registerToolRenderer } from './registry.js'
+import { myToolRenderer } from './renderers/MyToolRenderer.js'
 
-registerToolRenderer('bash', bashRenderer)
+registerToolRenderer('my_tool', myToolRenderer)
 ```
 
 ### 第 4 步：验证
@@ -241,32 +293,6 @@ registerToolRenderer('bash', bashRenderer)
 - `pnpm build` 无错误
 - `pnpm test` 通过
 - UI 上工具调用显示正确的图标和状态文案
-
-### DefaultRenderer 参考实现
-
-DefaultRenderer 是所有未注册工具的 fallback，也是新 renderer 的参考模板：
-
-```typescript
-export const defaultRenderer: ToolRenderer = {
-  getMetadata(ctx) {
-    return {
-      icon: SvgCircle,
-      status: ctx.toolCall.name,
-      surfaceBackground: ctx.state === 'error' ? 'error' : 'tint',
-      supportsCollapsible: false,
-    }
-  },
-  render(ctx) {
-    if (ctx.renderType === 'compact') {
-      return { content: <CompactView ctx={ctx} />, custom: true }
-    }
-    return { content: <DefaultRendererView ctx={ctx} />, custom: false }
-  },
-  supportsRenderType(renderType) {
-    return renderType === 'full' || renderType === 'compact'
-  },
-}
-```
 
 ## 文件位置
 
@@ -281,14 +307,15 @@ packages/ui/src/
 │       ├── tools/                      # Renderer 系统
 │       │   ├── types.ts                # ToolRenderer / ToolRenderMetadata / ToolRenderResult
 │       │   ├── registry.ts             # registerToolRenderer / getToolRenderer
-│       │   ├── index.ts                # renderTool() 入口 + re-exports
+│       │   ├── index.ts                # getToolMetadata() + renderTool() 入口
+│       │   ├── register-builtins.ts    # 内置 renderer 自动注册（side-effect import）
 │       │   └── renderers/
 │       │       ├── DefaultRenderer.tsx  # 通用 fallback renderer
-│       │       ├── ToolHeader.tsx       # StateIcon + ToolHeader 组件
-│       │       └── <ToolName>Renderer.tsx  # 工具专用 renderer
+│       │       ├── BashRenderer.tsx     # bash 工具 renderer
+│       │       └── ToolHeader.tsx       # StateIcon + ToolHeader 组件
 │       ├── timeline/                   # Timeline 布局组件（纯布局，不做 tool-specific 判断）
-│       │   ├── ToolTimeline.tsx         # 入口，调用 renderer.getMetadata() + render()
-│       │   ├── TimelineStep.tsx         # 布局组合器
+│       │   ├── ToolTimeline.tsx         # 入口，调用 getToolMetadata()
+│       │   ├── TimelineStep.tsx         # 布局组合器 + step 级折叠
 │       │   ├── TimelineRail.tsx         # 左侧 icon + 连接线
 │       │   ├── TimelineSurface.tsx      # 背景色容器
 │       │   ├── TimelineStepContent.tsx  # header + 可折叠 body

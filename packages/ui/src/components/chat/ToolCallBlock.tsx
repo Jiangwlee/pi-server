@@ -2,43 +2,24 @@ import { memo } from 'react'
 import type { ChatMessage, ToolCall, RenderType } from '../../client/types.js'
 import { renderTool } from './tools/index.js'
 
-export type ToolCallBlockClassNames = {
-  root?: string
-  card?: string
-}
-
-const defaults = {
-  card: 'py-2.5 px-3 border border-border rounded-lg bg-panel',
-}
-
 export const ToolCallBlock = memo(function ToolCallBlock({
   toolCall,
   result,
   streaming,
   className,
-  classNames,
   renderType = 'full',
 }: {
   toolCall: ToolCall
   result?: ChatMessage
   streaming?: boolean
   className?: string
-  classNames?: ToolCallBlockClassNames
   renderType?: RenderType
 }) {
-  const { content, custom } = renderTool(toolCall, result, streaming, renderType)
-
-  if (custom) {
-    return <div className={[classNames?.root, className].filter(Boolean).join(' ')}>{content}</div>
-  }
+  const { content } = renderTool(toolCall, result, streaming, renderType)
 
   return (
-    <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
-      <div
-        className={classNames?.card ?? defaults.card}
-      >
-        {content}
-      </div>
+    <div className={className}>
+      {content}
     </div>
   )
 })

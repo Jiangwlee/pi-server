@@ -36,7 +36,8 @@ describe('MessageItem', () => {
 
     expect(screen.getByText('answer text')).toBeTruthy()
     expect(screen.getByRole('button', { name: '▶Thought' })).toBeTruthy()
-    expect(screen.getByText('runTool')).toBeTruthy()
+    // ToolCallBlock renders DefaultRenderer which shows args as pre block
+    expect(screen.getByText(/"x": 1/)).toBeTruthy()
     expect(screen.getByRole('img', { name: 'message image' })).toBeTruthy()
   })
 

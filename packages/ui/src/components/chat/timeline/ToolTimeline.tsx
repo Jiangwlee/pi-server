@@ -147,7 +147,6 @@ export const ToolTimeline = memo(function ToolTimeline({
                 streaming={execution?.state === 'inprogress'}
                 isFirst={i === 0}
                 isLast={i === steps.length - 1 && !showDoneStep}
-                isExpanded={true}
               />
             )
           })}

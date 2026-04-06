@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import type { ChatMessage, ToolCall } from '../../../client/types.js'
 import type { ToolRenderState, ToolRenderMetadata } from '../tools/types.js'
 import { TimelineRail } from './TimelineRail.js'
@@ -15,8 +15,6 @@ export interface TimelineStepProps {
   streaming?: boolean
   isFirst?: boolean
   isLast?: boolean
-  isExpanded?: boolean
-  onToggle?: () => void
 }
 
 export const TimelineStep = memo(function TimelineStep({
@@ -27,10 +25,27 @@ export const TimelineStep = memo(function TimelineStep({
   streaming,
   isFirst,
   isLast,
-  isExpanded,
-  onToggle,
 }: TimelineStepProps) {
   const [isHover, setIsHover] = useState(false)
+  // Step-level collapse: expanded while streaming, collapsed when complete
+  const [isExpanded, setIsExpanded] = useState(state === 'inprogress')
+  const userToggledRef = useRef(false)
+  const prevStateRef = useRef(state)
+
+  // Auto-collapse when step completes (if user hasn't manually toggled)
+  useEffect(() => {
+    if (prevStateRef.current === 'inprogress' && state !== 'inprogress') {
+      if (!userToggledRef.current) {
+        setIsExpanded(false)
+      }
+    }
+    prevStateRef.current = state
+  }, [state])
+
+  const handleToggle = () => {
+    userToggledRef.current = true
+    setIsExpanded((prev) => !prev)
+  }
 
   const surface = meta?.surfaceBackground ?? (state === 'error' ? 'error' : 'tint')
   const header = meta?.status ?? toolCall.name
@@ -54,9 +69,9 @@ export const TimelineStep = memo(function TimelineStep({
           header={typeof header === 'string'
             ? <span className="text-sm" style={{ color: 'var(--tl-text-04, rgba(0,0,0,0.75))' }}>{header}</span>
             : header}
-          collapsible={!!onToggle}
+          collapsible
           isExpanded={isExpanded}
-          onToggle={onToggle}
+          onToggle={handleToggle}
           surfaceBackground={surface}
         >
           <ToolCallBlock toolCall={toolCall} result={result} streaming={streaming} />

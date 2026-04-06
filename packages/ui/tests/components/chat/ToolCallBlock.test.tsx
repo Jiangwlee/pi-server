@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, render } from '@testing-library/react'
 import { afterEach } from 'vitest'
 import { ToolCallBlock } from '../../../src/components/chat/ToolCallBlock.js'
 
@@ -9,8 +9,8 @@ afterEach(() => {
 })
 
 describe('ToolCallBlock', () => {
-  it('renders tool name and toggles arguments', () => {
-    render(
+  it('renders default renderer content for unregistered tool', () => {
+    const { container } = render(
       <ToolCallBlock
         toolCall={{
           type: 'toolCall',
@@ -21,23 +21,14 @@ describe('ToolCallBlock', () => {
       />,
     )
 
-    // Tool name should be visible in the header
-    expect(screen.getByText('readFile')).toBeTruthy()
-    // No result → inprogress state → expanded by default, showing input
-    expect(screen.getByText(/tmp\/test\.txt/)).toBeTruthy()
-
-    // Click to collapse
-    const toggle = screen.getByRole('button')
-    fireEvent.click(toggle)
-    expect(screen.queryByText(/tmp\/test\.txt/)).toBeNull()
-
-    // Click to expand again
-    fireEvent.click(toggle)
-    expect(screen.getByText(/tmp\/test\.txt/)).toBeTruthy()
+    // DefaultRenderer outputs a PreBlock with the formatted args
+    const pre = container.querySelector('pre')
+    expect(pre).toBeTruthy()
+    expect(pre!.textContent).toContain('/tmp/test.txt')
   })
 
-  it('shows complete state with result', () => {
-    render(
+  it('renders result output', () => {
+    const { container } = render(
       <ToolCallBlock
         toolCall={{
           type: 'toolCall',
@@ -55,55 +46,49 @@ describe('ToolCallBlock', () => {
       />,
     )
 
-    expect(screen.getByText('readFile')).toBeTruthy()
-    // Complete state: collapsed by default
-    const toggle = screen.getByRole('button')
-    fireEvent.click(toggle)
-    expect(screen.getByText('Input')).toBeTruthy()
-    expect(screen.getByText('Output')).toBeTruthy()
-    expect(screen.getByText(/file contents here/)).toBeTruthy()
+    const pres = container.querySelectorAll('pre')
+    // Should have input + output blocks
+    expect(pres.length).toBe(2)
+    expect(pres[1].textContent).toContain('file contents here')
   })
 
-  it('shows inprogress state when streaming', () => {
-    render(
+  it('renders bash tool with BashRenderer', () => {
+    const { container } = render(
       <ToolCallBlock
         toolCall={{
           type: 'toolCall',
           id: 'tc1',
           name: 'bash',
-          arguments: { command: 'ls' },
-        }}
-        streaming
-      />,
-    )
-
-    expect(screen.getByText('bash')).toBeTruthy()
-    // Inprogress state: expanded by default, shows Input
-    expect(screen.getByText('Input')).toBeTruthy()
-  })
-
-  it('shows error state when result has isError', () => {
-    render(
-      <ToolCallBlock
-        toolCall={{
-          type: 'toolCall',
-          id: 'tc1',
-          name: 'readFile',
-          arguments: { path: '/nonexistent' },
+          arguments: { command: 'ls -la' },
         }}
         result={{
           id: 'tool-1',
           role: 'tool',
           toolCallId: 'tc1',
-          toolName: 'readFile',
-          isError: true,
-          content: [{ type: 'text', text: 'File not found' }],
+          toolName: 'bash',
+          content: [{ type: 'text', text: 'total 42\ndrwxr-xr-x 5 user' }],
         }}
       />,
     )
 
-    expect(screen.getByText('readFile')).toBeTruthy()
-    // Error state: expanded by default
-    expect(screen.getByText(/File not found/)).toBeTruthy()
+    // BashRenderer shows output only (command is in timeline header)
+    expect(container.textContent).toContain('total 42')
+  })
+
+  it('returns null content when no args and no result', () => {
+    const { container } = render(
+      <ToolCallBlock
+        toolCall={{
+          type: 'toolCall',
+          id: 'tc1',
+          name: 'readFile',
+          arguments: {},
+        }}
+      />,
+    )
+
+    // DefaultFullView returns null when no args and no result
+    const pre = container.querySelector('pre')
+    expect(pre).toBeNull()
   })
 })

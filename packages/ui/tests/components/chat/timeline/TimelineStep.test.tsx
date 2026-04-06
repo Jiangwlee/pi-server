@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { TimelineStep } from '../../../../src/components/chat/timeline/TimelineStep.js'
 import type { ToolCall } from '../../../../src/client/types.js'
 
@@ -8,7 +8,7 @@ afterEach(() => {
   cleanup()
 })
 
-const makeToolCall = (name = 'bash', id = 'tc-1'): ToolCall => ({
+const makeToolCall = (name = 'some_tool', id = 'tc-1'): ToolCall => ({
   type: 'toolCall',
   id,
   name,
@@ -21,32 +21,60 @@ describe('TimelineStep', () => {
       <TimelineStep
         toolCall={makeToolCall('read_file')}
         state="complete"
-        isExpanded={true}
       />,
     )
-    // Tool name appears in our header span AND in ToolCallBlock's ToolHeader
     const matches = screen.getAllByText('read_file')
     expect(matches.length).toBeGreaterThanOrEqual(1)
-    // Our header span should be the one with text-sm class and inline color style
     const headerSpan = matches.find((el) => el.className.includes('text-sm'))
     expect(headerSpan).toBeTruthy()
   })
 
-  it('renders ToolCallBlock inside the step content body', () => {
-    const tc = makeToolCall('bash')
-
+  it('renders content when inprogress (expanded by default)', () => {
     render(
       <TimelineStep
-        toolCall={tc}
+        toolCall={makeToolCall()}
         state="inprogress"
-        isExpanded={true}
       />,
     )
-    // ToolCallBlock renders DefaultRenderer which includes the tool name in its header
     const stepContent = screen.getByTestId('timeline-step-content')
-    // The body (px-2 pb-2 div) should contain the ToolCallBlock card
-    const cardDiv = stepContent.querySelector('.border-border')
-    expect(cardDiv).toBeTruthy()
+    // Content should be present (inprogress = expanded)
+    const pre = stepContent.querySelector('pre')
+    expect(pre).toBeTruthy()
+  })
+
+  it('collapses content when complete (collapsed by default)', () => {
+    render(
+      <TimelineStep
+        toolCall={makeToolCall()}
+        state="complete"
+      />,
+    )
+    const stepContent = screen.getByTestId('timeline-step-content')
+    // Content should be hidden (complete = collapsed)
+    const pre = stepContent.querySelector('pre')
+    expect(pre).toBeNull()
+  })
+
+  it('toggles content on header button click', () => {
+    render(
+      <TimelineStep
+        toolCall={makeToolCall()}
+        state="complete"
+      />,
+    )
+    // Collapsed by default
+    const stepContent = screen.getByTestId('timeline-step-content')
+    expect(stepContent.querySelector('pre')).toBeNull()
+
+    // Click to expand
+    const toggle = screen.getByRole('button', { name: /expand/i })
+    fireEvent.click(toggle)
+    expect(stepContent.querySelector('pre')).toBeTruthy()
+
+    // Click to collapse
+    const collapse = screen.getByRole('button', { name: /collapse/i })
+    fireEvent.click(collapse)
+    expect(stepContent.querySelector('pre')).toBeNull()
   })
 
   it('passes isFirst/isLast to rail connectors', () => {
@@ -75,7 +103,6 @@ describe('TimelineStep', () => {
 
     const topConnector2 = screen.getByTestId('rail-top-connector')
     expect(topConnector2.getAttribute('data-visible')).toBe('true')
-    // Bottom connector is omitted when isLast
     expect(screen.queryByTestId('rail-bottom-connector')).toBeNull()
   })
 
@@ -89,7 +116,7 @@ describe('TimelineStep', () => {
 
   it('uses error background for error state', () => {
     render(
-      <TimelineStep toolCall={makeToolCall()} state="error" isExpanded={true} />,
+      <TimelineStep toolCall={makeToolCall()} state="error" />,
     )
     const surface = screen.getByTestId('timeline-surface')
     expect(surface.style.backgroundColor).toContain('--tl-status-error-00')

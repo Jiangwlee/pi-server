@@ -94,7 +94,11 @@ export const TimelineStepContent = memo(function TimelineStepContent({
         </div>
       </div>
       {isExpanded && children ? (
-        <div className="pl-1 pb-1 pr-[var(--tl-step-header-right-section-width)]">{children}</div>
+        <div className="px-1 pb-1">
+          <div className="rounded-lg bg-white p-2.5">
+            {children}
+          </div>
+        </div>
       ) : null}
     </div>
   )

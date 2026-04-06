@@ -2,6 +2,9 @@ export type { ToolRenderState, RenderType, ToolRenderResult, ToolRenderContext, 
 export { registerToolRenderer, getToolRenderer, getRegisteredToolNames } from './registry.js'
 export { ToolHeader, StateIcon } from './renderers/ToolHeader.js'
 
+// Side-effect: register built-in renderers
+import './register-builtins.js'
+
 import type { ChatMessage, ToolCall, ToolRenderState, RenderType } from '../../../client/types.js'
 import type { ToolRenderResult, ToolRenderMetadata } from './types.js'
 import { resolveToolState } from '../../../state/resolve-tool-state.js'
