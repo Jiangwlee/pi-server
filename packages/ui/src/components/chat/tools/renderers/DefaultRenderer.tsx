@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import type { ToolRenderContext, ToolRenderResult, ToolRenderer } from '../types.js'
+import type { ToolRenderContext, ToolRenderResult, ToolRenderMetadata, ToolRenderer } from '../types.js'
 import { ToolHeader } from './ToolHeader.js'
+import SvgCircle from '../../../icons/SvgCircle.js'
 
 function formatJson(value: unknown): string {
   try {
@@ -116,6 +117,13 @@ function CompactView({ ctx }: { ctx: ToolRenderContext }) {
 }
 
 export const defaultRenderer: ToolRenderer = {
+  getMetadata(ctx: ToolRenderContext): ToolRenderMetadata {
+    return {
+      icon: SvgCircle,
+      status: ctx.toolCall.name,
+      surfaceBackground: ctx.state === 'error' ? 'error' : 'tint',
+    }
+  },
   render(ctx: ToolRenderContext): ToolRenderResult {
     if (ctx.renderType === 'compact') {
       return {

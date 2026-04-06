@@ -3,11 +3,15 @@
  * Matches Onyx's TimelineIconColumn layout.
  */
 import { memo } from 'react'
+import type { ComponentType } from 'react'
 import type { ToolRenderState } from '../tools/types.js'
+import type { IconProps } from '../../icons/types.js'
 import { StateIcon } from '../tools/index.js'
 
 export interface TimelineRailProps {
   state: ToolRenderState
+  /** Custom icon component from renderer metadata. Falls back to StateIcon if omitted. */
+  icon?: ComponentType<IconProps>
   isFirst?: boolean
   isLast?: boolean
   isHover?: boolean
@@ -15,6 +19,7 @@ export interface TimelineRailProps {
 
 export const TimelineRail = memo(function TimelineRail({
   state,
+  icon: Icon,
   isFirst,
   isLast,
   isHover,
@@ -49,7 +54,7 @@ export const TimelineRail = memo(function TimelineRail({
           }}
           data-testid="rail-icon"
         >
-          <StateIcon state={state} isHover={isHover} />
+          {Icon ? <Icon size={12} /> : <StateIcon state={state} isHover={isHover} />}
         </div>
         {/* Bottom connector within header row */}
         <div

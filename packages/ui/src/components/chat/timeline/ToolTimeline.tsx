@@ -16,7 +16,7 @@ import { TimelineStep } from './TimelineStep.js'
 import { DoneStep } from './DoneStep.js'
 import { AgentAvatar } from './AgentAvatar.js'
 import { CollapsedStreamingContent } from './CollapsedStreamingContent.js'
-import { getToolRenderer, defaultRenderer } from '../tools/index.js'
+import { getToolRenderer, defaultRenderer, getToolMetadata } from '../tools/index.js'
 
 function rendererSupportsCompact(toolName: string): boolean {
   const renderer = getToolRenderer(toolName)
@@ -135,6 +135,7 @@ export const ToolTimeline = memo(function ToolTimeline({
             const state = execution
               ? execution.state
               : resolveToolState(result, streaming)
+            const meta = getToolMetadata(step.toolCall, result, state)
 
             return (
               <TimelineStep
@@ -142,6 +143,7 @@ export const ToolTimeline = memo(function ToolTimeline({
                 toolCall={step.toolCall}
                 result={result}
                 state={state}
+                meta={meta}
                 streaming={execution?.state === 'inprogress'}
                 isFirst={i === 0}
                 isLast={i === steps.length - 1 && !showDoneStep}
