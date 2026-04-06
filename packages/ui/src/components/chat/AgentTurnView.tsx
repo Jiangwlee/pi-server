@@ -13,6 +13,8 @@ export const AgentTurnView = memo(function AgentTurnView({
   renderAvatar,
   onCopy,
   onRegenerate,
+  onFeedback,
+  feedbacks,
   classNames,
 }: {
   turn: AgentTurn
@@ -20,6 +22,8 @@ export const AgentTurnView = memo(function AgentTurnView({
   renderAvatar?: (message: import('../../client/types.js').ChatMessage) => ReactNode
   onCopy?: (message: import('../../client/types.js').ChatMessage) => void
   onRegenerate?: (message: import('../../client/types.js').ChatMessage) => void
+  onFeedback?: (message: import('../../client/types.js').ChatMessage, isPositive: boolean) => void
+  feedbacks?: Map<string, boolean | null>
   classNames?: MessageItemClassNames
 }) {
   const hasSteps = turn.steps.length > 0
@@ -40,6 +44,8 @@ export const AgentTurnView = memo(function AgentTurnView({
             renderAvatar={renderAvatar}
             onCopy={onCopy}
             onRegenerate={onRegenerate}
+            onFeedback={onFeedback}
+            feedback={feedbacks?.get(turn.finalAnswer.id)}
             classNames={classNames}
           />
         </div>

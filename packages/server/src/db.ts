@@ -39,6 +39,20 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 CREATE INDEX IF NOT EXISTS idx_attachments_user_id ON attachments(user_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_session_id ON attachments(session_id);
+
+CREATE TABLE IF NOT EXISTS message_feedback (
+  id TEXT PRIMARY KEY,
+  message_id TEXT NOT NULL,
+  session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  is_positive INTEGER NOT NULL,
+  feedback_text TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(message_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_feedback_session_id ON message_feedback(session_id);
+CREATE INDEX IF NOT EXISTS idx_message_feedback_user_id ON message_feedback(user_id);
 `
 
 export function initDb(dbPath: string): Database.Database {

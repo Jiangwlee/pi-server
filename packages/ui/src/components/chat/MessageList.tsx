@@ -26,6 +26,8 @@ export function MessageList({
   renderAvatar,
   onCopy,
   onRegenerate,
+  onFeedback,
+  feedbacks,
   className,
   classNames,
 }: {
@@ -34,6 +36,8 @@ export function MessageList({
   renderAvatar?: (message: ChatMessage) => ReactNode
   onCopy?: (message: ChatMessage) => void
   onRegenerate?: (message: ChatMessage) => void
+  onFeedback?: (message: ChatMessage, isPositive: boolean) => void
+  feedbacks?: Map<string, boolean | null>
   className?: string
   classNames?: MessageListClassNames
 }) {
@@ -75,6 +79,8 @@ export function MessageList({
               renderAvatar={renderAvatar}
               onCopy={onCopy}
               onRegenerate={onRegenerate}
+              onFeedback={onFeedback}
+              feedbacks={feedbacks}
               classNames={classNames}
             />
           </div>

@@ -1,6 +1,7 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type ChatMessage, useChat } from '../../state/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
+import { ApiClient } from '../../client/api-client.js'
 import { useFileUpload } from '../../hooks/use-file-upload.js'
 import { useAutoScroll } from '../../hooks/use-auto-scroll.js'
 import { ChatInput } from './ChatInput.js'
@@ -55,6 +56,8 @@ export function ChatPanel(
   const [selectedModelId, setSelectedModelId] = useState<string>('')
   const [thinkingLevel, setThinkingLevel] = useState<'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'>('medium')
   const [inputValue, setInputValue] = useState('')
+  const [feedbacks, setFeedbacks] = useState<Map<string, boolean | null>>(new Map())
+  const apiClient = useMemo(() => new ApiClient(), [])
 
   const isLoading = status === 'running'
   const { scrollRef, isAtBottom, scrollToBottom } = useAutoScroll([messages, status])
@@ -101,6 +104,22 @@ export function ChatPanel(
     void abort()
   }, [abort])
 
+  const handleFeedback = useCallback((message: ChatMessage, isPositive: boolean) => {
+    const current = feedbacks.get(message.id)
+    // Toggle off if clicking the same button
+    if (current === isPositive) {
+      setFeedbacks(prev => new Map(prev).set(message.id, null))
+      void apiClient.deleteFeedback(sessionId, message.id).catch(() => {
+        setFeedbacks(prev => new Map(prev).set(message.id, isPositive))
+      })
+    } else {
+      setFeedbacks(prev => new Map(prev).set(message.id, isPositive))
+      void apiClient.submitFeedback(sessionId, message.id, isPositive).catch(() => {
+        setFeedbacks(prev => new Map(prev).set(message.id, current ?? null))
+      })
+    }
+  }, [feedbacks, sessionId, apiClient])
+
   return (
     <section className={[classNames?.root, className].filter(Boolean).join(' ')}>
       <header className={classNames?.header}>
@@ -120,6 +139,8 @@ export function ChatPanel(
             tool: classNames?.messageTool,
           }}
           renderAvatar={renderAvatar}
+          onFeedback={handleFeedback}
+          feedbacks={feedbacks}
         />
         {!isAtBottom ? (
           <button

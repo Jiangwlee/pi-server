@@ -46,6 +46,8 @@ export const MessageItem = memo(function MessageItem({
   renderAvatar,
   onCopy,
   onRegenerate,
+  onFeedback,
+  feedback,
   className,
   classNames,
 }: {
@@ -53,6 +55,8 @@ export const MessageItem = memo(function MessageItem({
   renderAvatar?: (message: ChatMessage) => ReactNode
   onCopy?: (message: ChatMessage) => void
   onRegenerate?: (message: ChatMessage) => void
+  onFeedback?: (message: ChatMessage, isPositive: boolean) => void
+  feedback?: boolean | null
   className?: string
   classNames?: MessageItemClassNames
 }) {
@@ -165,11 +169,13 @@ export const MessageItem = memo(function MessageItem({
             return null
           })}
         </div>
-        {(onCopy || onRegenerate) ? (
+        {(onCopy || onRegenerate || onFeedback) ? (
           <MessageToolbar
             text={extractText(message)}
             onCopy={onCopy ? () => onCopy(message) : undefined}
             onRegenerate={onRegenerate ? () => onRegenerate(message) : undefined}
+            onFeedback={onFeedback ? (isPositive) => onFeedback(message, isPositive) : undefined}
+            feedback={feedback}
             className={classNames?.toolbar}
           />
         ) : null}

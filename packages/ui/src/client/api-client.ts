@@ -96,6 +96,24 @@ export class ApiClient {
     return this.request('/api/models', { method: 'GET' })
   }
 
+  async submitFeedback(
+    sessionId: string,
+    messageId: string,
+    isPositive: boolean,
+    feedbackText?: string,
+  ): Promise<{ ok: true }> {
+    return this.request(`/api/sessions/${sessionId}/messages/${messageId}/feedback`, {
+      method: 'POST',
+      body: { is_positive: isPositive, feedback_text: feedbackText },
+    })
+  }
+
+  async deleteFeedback(sessionId: string, messageId: string): Promise<{ ok: true }> {
+    return this.request(`/api/sessions/${sessionId}/messages/${messageId}/feedback`, {
+      method: 'DELETE',
+    })
+  }
+
   async upload(file: File, sessionId: string): Promise<UploadedFile> {
     const formData = new FormData()
     formData.append('file', file)

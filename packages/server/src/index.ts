@@ -21,6 +21,8 @@ import { createSessionRoutes } from './routes/sessions.js'
 import { createRuntimeRoutes } from './routes/runtime.js'
 import { createFileRoutes } from './routes/files.js'
 import { createModelRoutes } from './routes/models.js'
+import { createFeedbackRoutes } from './routes/feedback.js'
+import { FeedbackStore } from './stores/feedback-store.js'
 import { initLogger, logger } from './logger.js'
 import { createRequestLoggerMiddleware } from './http/request-logger.js'
 
@@ -74,6 +76,7 @@ if (config.authServer) {
   const userStore = new UserStore(db)
   const sessionStore = new SessionStore(db)
   const attachmentStore = new AttachmentStore(db)
+  const feedbackStore = new FeedbackStore(db)
 
   // Initialize Pi Provider
   const piProvider = new PiProvider({
@@ -152,6 +155,7 @@ if (config.authServer) {
   app.route('/', createRuntimeRoutes(sessionStore, registry, config.dataDir, attachmentStore))
   app.route('/', createFileRoutes(attachmentStore, sessionStore, config.dataDir))
   app.route('/', createModelRoutes(piProvider))
+  app.route('/', createFeedbackRoutes(sessionStore, feedbackStore))
 
   // Startup
   async function start() {
