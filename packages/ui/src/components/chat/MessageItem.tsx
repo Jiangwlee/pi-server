@@ -164,6 +164,7 @@ export const MessageItem = memo(function MessageItem({
               )
             }
             if (content.type === 'thinking') {
+              if (!content.redacted && !content.thinking) return null
               return (
                 <ThinkingBlock
                   key={`${message.id}-thinking-${index}`}
