@@ -21,7 +21,6 @@ export type MessageItemClassNames = {
   imageBlock?: string
   attachments?: string
   attachmentThumbnail?: string
-  metadata?: string
   toolbar?: string
 }
 
@@ -31,24 +30,8 @@ const defaults = {
   contentAssistant: 'max-w-[52.5rem]',
   contentTool: 'max-w-[52.5rem]',
   avatar: 'w-8 h-8 rounded-full flex-shrink-0',
-  metadata: 'text-xs text-muted mt-1',
   attachments: 'flex gap-2 flex-wrap mb-2',
   attachmentThumbnail: 'w-16 h-16 object-cover rounded-lg border border-border',
-}
-
-function renderUsage(message: ChatMessage) {
-  if (!message.usage || message.streaming) return null
-  return (
-    <div>
-      Usage: in {message.usage.input}, out {message.usage.output}, total {message.usage.totalTokens}
-    </div>
-  )
-}
-
-function renderStopReason(message: ChatMessage) {
-  if (message.stopReason === 'error') return <div>Error</div>
-  if (message.stopReason === 'aborted') return <div>Aborted</div>
-  return null
 }
 
 function extractText(message: ChatMessage): string {
@@ -56,18 +39,6 @@ function extractText(message: ChatMessage): string {
     .filter((c) => c.type === 'text')
     .map((c) => c.text)
     .join('')
-}
-
-function renderMetadata(message: ChatMessage, classNames?: MessageItemClassNames) {
-  const usage = renderUsage(message)
-  const stopReason = renderStopReason(message)
-  if (!usage && !stopReason) return null
-  return (
-    <div className={classNames?.metadata ?? defaults.metadata}>
-      {usage}
-      {stopReason}
-    </div>
-  )
 }
 
 export const MessageItem = memo(function MessageItem({
@@ -124,7 +95,6 @@ export const MessageItem = memo(function MessageItem({
               className={classNames?.textBlock}
             />
           </div>
-          {renderMetadata(message, classNames)}
         </div>
       </div>
     )
@@ -139,7 +109,6 @@ export const MessageItem = memo(function MessageItem({
           <div className={contentClass}>
             <ToolResultBlock message={message} />
           </div>
-          {renderMetadata(message, classNames)}
         </div>
       </div>
     )
@@ -204,7 +173,6 @@ export const MessageItem = memo(function MessageItem({
             className={classNames?.toolbar}
           />
         ) : null}
-        {renderMetadata(message, classNames)}
       </div>
     </div>
   )
