@@ -25,11 +25,10 @@ export default function ChatLayoutPage({ children }: { children: ReactNode }) {
       <ChatLayout
         classNames={{
           root: 'h-screen',
-          sidebar: 'border-r border-border bg-panel p-4',
-          main: 'h-screen',
         }}
         sidebar={
-          <SessionList
+          <div className="p-4">
+            <SessionList
             sessions={sessions}
             loading={loading}
             selectedSessionId={selectedSessionId}
@@ -58,6 +57,7 @@ export default function ChatLayoutPage({ children }: { children: ReactNode }) {
               }
             }}
           />
+          </div>
         }
       >
         {children}
