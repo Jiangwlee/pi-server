@@ -31,10 +31,13 @@ export type CreateSessionRequest = {
   label?: string
 }
 
+export type ThinkingLevel = 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+
 export type SendRequest = {
   message: string
   model?: string
   fileIds?: string[]
+  thinkingLevel?: ThinkingLevel
 }
 
 export type UploadedFile = {

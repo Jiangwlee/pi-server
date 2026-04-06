@@ -2,17 +2,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { useChat } from '../../hooks/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
 import { useFileUpload } from '../../hooks/use-file-upload.js'
+import { useAutoScroll } from '../../hooks/use-auto-scroll.js'
 import { ChatInput } from './ChatInput.js'
 import { ChatSendButton } from './ChatSendButton.js'
 import { ModelSelector, getModelOptionValue } from './ModelSelector.js'
 import { FileUploadButton } from './FileUploadButton.js'
 import { AttachmentPreview } from './AttachmentPreview.js'
+import { ThinkingLevelSelector } from './ThinkingLevelSelector.js'
 import { MessageList } from './MessageList.js'
 
 type ChatPanelClassNames = {
   root?: string
   header?: string
   messageList?: string
+  messageListWrapper?: string
+  scrollToBottom?: string
   composer?: string
   footer?: string
   messageItem?: string
@@ -21,6 +25,7 @@ type ChatPanelClassNames = {
   messageTool?: string
   textarea?: string
   modelSelect?: string
+  thinkingLevelSelect?: string
   sendButton?: string
   uploadButton?: string
   attachmentPreview?: string
@@ -41,9 +46,11 @@ export function ChatPanel(
   const { models, loadModels } = useModels()
   const fileUpload = useFileUpload({ sessionId })
   const [selectedModelId, setSelectedModelId] = useState<string>('')
+  const [thinkingLevel, setThinkingLevel] = useState<'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'>('medium')
   const [inputValue, setInputValue] = useState('')
 
   const isLoading = status === 'running'
+  const { scrollRef, isAtBottom, scrollToBottom } = useAutoScroll([messages, status])
 
   useEffect(() => {
     void loadModels()
@@ -71,6 +78,7 @@ export function ChatPanel(
       ...(selectedModelId ? { model: selectedModelId } : {}),
       ...(fileUpload.fileIds.length > 0 ? { fileIds: fileUpload.fileIds } : {}),
       ...(attachments ? { attachments } : {}),
+      thinkingLevel,
     })
     setInputValue('')
     fileUpload.clear()
@@ -91,20 +99,44 @@ export function ChatPanel(
       <header className={classNames?.header}>
         <h2>Session {sessionId}</h2>
       </header>
-      <MessageList
-        messages={messages}
-        className={classNames?.messageList}
-        classNames={{
-          item: classNames?.messageItem,
-          user: classNames?.messageUser,
-          assistant: classNames?.messageAssistant,
-          tool: classNames?.messageTool,
-        }}
-      />
+      <div
+        ref={scrollRef as React.RefObject<HTMLDivElement>}
+        className={classNames?.messageListWrapper}
+        style={{ flex: 1, overflowY: 'auto', position: 'relative' }}
+      >
+        <MessageList
+          messages={messages}
+          className={classNames?.messageList}
+          classNames={{
+            item: classNames?.messageItem,
+            user: classNames?.messageUser,
+            assistant: classNames?.messageAssistant,
+            tool: classNames?.messageTool,
+          }}
+        />
+        {!isAtBottom ? (
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            className={classNames?.scrollToBottom}
+            aria-label="Scroll to bottom"
+            style={{
+              position: 'sticky',
+              bottom: 8,
+              display: 'block',
+              margin: '0 auto',
+              zIndex: 5,
+            }}
+          >
+            ↓
+          </button>
+        ) : null}
+      </div>
       <ChatInput
         value={inputValue}
         onInput={setInputValue}
         onSend={handleSend}
+        onAbort={handleStop}
         onFiles={handleFiles}
         loading={isLoading}
         className={classNames?.composer}
@@ -134,6 +166,12 @@ export function ChatPanel(
                   value={selectedModelId}
                   onChange={setSelectedModelId}
                   classNames={{ select: classNames?.modelSelect }}
+                />
+                <ThinkingLevelSelector
+                  value={thinkingLevel}
+                  onChange={setThinkingLevel}
+                  disabled={isLoading}
+                  classNames={{ select: classNames?.thinkingLevelSelect }}
                 />
               </>
             }

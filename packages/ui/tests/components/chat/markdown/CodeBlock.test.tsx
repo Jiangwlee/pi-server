@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach } from 'vitest'
 
 const useStaticHighlightMock = vi.fn(() => null)
 const useStreamHighlightMock = vi.fn(() => ({ lines: [] }))
@@ -14,6 +15,10 @@ vi.mock('../../../../src/components/chat/markdown/useStreamHighlight.js', () => 
 }))
 
 import { CodeBlock, extractLanguageFromClassName } from '../../../../src/components/chat/markdown/CodeBlock.js'
+
+afterEach(() => {
+  cleanup()
+})
 
 describe('CodeBlock', () => {
   beforeEach(() => {
@@ -55,5 +60,26 @@ describe('CodeBlock', () => {
 
     const code = container.querySelector('code.language-js')
     expect(code?.textContent).toBe('let x = 1')
+  })
+
+  it('renders language label and copy button', () => {
+    render(
+      <CodeBlock className="language-python">{'print("hello")'}</CodeBlock>,
+    )
+
+    expect(screen.getByText('python')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Copy code' })).toBeTruthy()
+  })
+
+  it('copies code to clipboard on click', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+
+    render(
+      <CodeBlock className="language-js">{'const x = 1'}</CodeBlock>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy code' }))
+    expect(writeText).toHaveBeenCalledWith('const x = 1')
   })
 })

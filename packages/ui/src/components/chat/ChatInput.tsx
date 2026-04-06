@@ -13,6 +13,7 @@ export type ChatInputProps = {
   value?: string
   onInput?: (value: string) => void
   onSend?: () => void
+  onAbort?: () => void
   onFiles?: (files: File[]) => void
   loading?: boolean
   placeholder?: string
@@ -31,6 +32,7 @@ export const ChatInput = memo(function ChatInput(
     value,
     onInput,
     onSend,
+    onAbort,
     onFiles,
     loading,
     placeholder,
@@ -75,6 +77,11 @@ export const ChatInput = memo(function ChatInput(
   }, [adjustHeight, value])
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape' && loading && onAbort) {
+      event.preventDefault()
+      onAbort()
+      return
+    }
     if (event.key !== 'Enter') return
     if (event.shiftKey) return
     if (composingRef.current) return
@@ -82,7 +89,7 @@ export const ChatInput = memo(function ChatInput(
 
     event.preventDefault()
     onSend?.()
-  }, [loading, disabled, onSend])
+  }, [loading, disabled, onSend, onAbort])
 
   const handlePaste = useCallback((event: ClipboardEvent<HTMLTextAreaElement>) => {
     if (!onFiles) return

@@ -15,9 +15,12 @@ export type ImageContent = {
   mimeType: string
 }
 
+export type ThinkingLevel = 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+
 export type SdkSession = {
   prompt: (text: string, images?: ImageContent[]) => Promise<void>
   setModel: (provider: string, modelId: string) => Promise<void>
+  setThinkingLevel: (level: ThinkingLevel) => void
   abort: () => Promise<void>
   subscribe: (listener: (event: unknown) => void) => () => void
   dispose: () => void
@@ -77,6 +80,7 @@ export class SessionRegistry {
     message: string,
     model?: { provider: string; modelId: string },
     images?: ImageContent[],
+    thinkingLevel?: ThinkingLevel,
   ): Promise<void> {
     const entry = this.getOrCreateEntry(sessionId)
 
@@ -102,7 +106,7 @@ export class SessionRegistry {
     logger.info({ sessionId, userId }, 'session.send_started')
     this.broadcast(entry, 'status', { status: 'running' })
 
-    return this.runSend(entry, sessionId, sessionPath, cwd, message, model, images)
+    return this.runSend(entry, sessionId, sessionPath, cwd, message, model, images, thinkingLevel)
   }
 
   private async runSend(
@@ -113,6 +117,7 @@ export class SessionRegistry {
     message: string,
     model?: { provider: string; modelId: string },
     images?: ImageContent[],
+    thinkingLevel?: ThinkingLevel,
   ): Promise<void> {
     const promptStartedAt = Date.now()
     let sdkEventCount = 0
@@ -199,6 +204,15 @@ export class SessionRegistry {
           provider: model.provider,
           modelId: model.modelId,
         }, 'session.set_model_completed')
+      }
+
+      if (thinkingLevel) {
+        entry.sdkSession.setThinkingLevel(thinkingLevel)
+        logger.info({
+          sessionId,
+          userId: entry.userId,
+          thinkingLevel,
+        }, 'session.set_thinking_level')
       }
 
       logger.info({

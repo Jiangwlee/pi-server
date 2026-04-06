@@ -174,6 +174,24 @@ describe('ChatInput', () => {
     expect(screen.queryByText('Drop files here')).toBeNull()
   })
 
+  it('calls onAbort on Escape when loading', () => {
+    const onAbort = vi.fn()
+    render(<ChatInput value="" onAbort={onAbort} loading />)
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' })
+
+    expect(onAbort).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT call onAbort on Escape when not loading', () => {
+    const onAbort = vi.fn()
+    render(<ChatInput value="" onAbort={onAbort} />)
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' })
+
+    expect(onAbort).not.toHaveBeenCalled()
+  })
+
   it('does NOT show drag overlay when onFiles is not provided', () => {
     const { container } = render(<ChatInput value="" />)
 

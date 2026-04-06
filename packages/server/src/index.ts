@@ -104,6 +104,7 @@ if (config.authServer) {
           }
           await session.setModel(model)
         },
+        setThinkingLevel: (level) => session.setThinkingLevel(level),
         abort: () => session.abort(),
         subscribe: (listener: (event: unknown) => void) => session.subscribe(listener),
         dispose: () => session.dispose(),

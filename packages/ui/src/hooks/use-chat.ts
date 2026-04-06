@@ -16,13 +16,14 @@ import type {
   SessionStatus,
   TextContent,
   ThinkingContent,
+  ThinkingLevel,
   ToolCall,
   Usage,
   StopReason,
 } from '../client/types.js'
 
 type ChatClient = {
-  send: (id: string, input: { message: string; model?: string; fileIds?: string[] }) => Promise<{ ok: true }>
+  send: (id: string, input: { message: string; model?: string; fileIds?: string[]; thinkingLevel?: ThinkingLevel }) => Promise<{ ok: true }>
   abort: (id: string) => Promise<{ ok: true }>
   history: (id: string) => Promise<{ messages: SessionHistoryEntry[] }>
 }
@@ -44,7 +45,7 @@ type UseChatResult = {
   messages: ChatMessage[]
   status: SessionStatus
   error: string | null
-  send: (message: string, options?: { model?: string; fileIds?: string[]; attachments?: ChatAttachment[] }) => Promise<void>
+  send: (message: string, options?: { model?: string; fileIds?: string[]; attachments?: ChatAttachment[]; thinkingLevel?: ThinkingLevel }) => Promise<void>
   abort: () => Promise<void>
   loadHistory: () => Promise<void>
 }
@@ -417,7 +418,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
     }
   }, [connect, loadHistory, nextId, sessionId])
 
-  const send = useCallback(async (message: string, options?: { model?: string; fileIds?: string[]; attachments?: ChatAttachment[] }): Promise<void> => {
+  const send = useCallback(async (message: string, options?: { model?: string; fileIds?: string[]; attachments?: ChatAttachment[]; thinkingLevel?: ThinkingLevel }): Promise<void> => {
     const text = message.trim()
     if (!text) return
     const optimisticId = nextId('local-user')
@@ -431,7 +432,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
     }])
 
     try {
-      await client.send(sessionId, { message: text, model: options?.model, fileIds: options?.fileIds })
+      await client.send(sessionId, { message: text, model: options?.model, fileIds: options?.fileIds, thinkingLevel: options?.thinkingLevel })
     } catch (err) {
       console.error('[useChat] send failed:', err instanceof ApiError ? `${err.status} ${err.body}` : err)
       setStatus('error')

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import type { SessionStore } from '../stores/session-store.js'
-import type { SessionRegistry } from '../runtime/session-registry.js'
+import type { SessionRegistry, ThinkingLevel } from '../runtime/session-registry.js'
 import type { AttachmentStore } from '../stores/attachment-store.js'
 import { resolveSessionPath, resolveWorkspacePath, ensureDirs } from '../runtime/path-resolver.js'
 import { resolveFileIdsToImages, MAX_FILE_IDS_PER_SEND } from './files.js'
@@ -34,7 +34,7 @@ export function createRuntimeRoutes(
   app.post('/api/sessions/:id/send', async (c) => {
     const userId = c.get('userId')
     const sessionId = c.req.param('id')
-    const body = await c.req.json<{ message: string; model?: string; fileIds?: string[] }>()
+    const body = await c.req.json<{ message: string; model?: string; fileIds?: string[]; thinkingLevel?: string }>()
 
     if (!body.message || !body.message.trim()) {
       return c.json({ error: 'message is required' }, 400)
@@ -72,7 +72,11 @@ export function createRuntimeRoutes(
 
     try {
       // Fire and forget — client listens via SSE
-      registry.send(sessionId, userId, sessionPath, workspacePath, body.message, model, images)
+      const validLevels: ThinkingLevel[] = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh']
+      const thinkingLevel = body.thinkingLevel && validLevels.includes(body.thinkingLevel as ThinkingLevel)
+        ? body.thinkingLevel as ThinkingLevel
+        : undefined
+      registry.send(sessionId, userId, sessionPath, workspacePath, body.message, model, images, thinkingLevel)
         .catch((err) => {
           logger.error({
             requestId: c.get('requestId'),
