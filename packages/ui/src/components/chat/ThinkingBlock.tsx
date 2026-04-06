@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import type { ThinkingContent } from '../../client/types.js'
+import SvgChevronDown from '../icons/SvgChevronDown.js'
 
 export type ThinkingBlockClassNames = {
   root?: string
@@ -72,7 +73,11 @@ export const ThinkingBlock = memo(function ThinkingBlock(
           </>
         ) : (
           <>
-            <span>{isExpanded ? '▼' : '▶'}</span>
+            <SvgChevronDown
+              size={14}
+              strokeWidth={2}
+              style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 150ms' }}
+            />
             <span>{elapsed > 0 ? `Thought for ${elapsed}s` : 'Thought'}</span>
           </>
         )}
