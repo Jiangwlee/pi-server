@@ -76,10 +76,7 @@ describe('ToolTimeline', () => {
     ])
 
     render(<ToolTimeline steps={steps} toolExecutions={toolExecutions} />)
-    // Default is collapsed, expand first
-    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
-    const btn = screen.getByRole('button', { name: /timeline/i })
-    fireEvent.click(btn)
+    // Default is expanded
     const stepEls = screen.getAllByTestId('timeline-step')
     expect(stepEls).toHaveLength(3)
   })
@@ -93,21 +90,21 @@ describe('ToolTimeline', () => {
 
     render(<ToolTimeline steps={steps} toolExecutions={toolExecutions} />)
 
-    // Default is collapsed
-    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
-
-    // Click to expand
-    const headers = screen.getAllByRole('button', { name: /timeline/i })
-    const header = headers[0]
-    fireEvent.click(header)
+    // Default is expanded
     expect(screen.getAllByTestId('timeline-step')).toHaveLength(2)
 
     // Click to collapse
+    const headers = screen.getAllByRole('button', { name: /timeline/i })
+    const header = headers[0]
     fireEvent.click(header)
     expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
+
+    // Click to expand again
+    fireEvent.click(header)
+    expect(screen.getAllByTestId('timeline-step')).toHaveLength(2)
   })
 
-  it('stays collapsed when streaming ends if user has not toggled', () => {
+  it('auto-collapses when streaming ends if user has not toggled', () => {
     const steps = [makeStep('bash', 'tc-1')]
     const streamingExecs = new Map([
       ['tc-1', makeExec('tc-1', 'bash', 'inprogress')],
@@ -117,19 +114,19 @@ describe('ToolTimeline', () => {
       <ToolTimeline steps={steps} toolExecutions={streamingExecs} />,
     )
 
-    // Default collapsed
-    expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
+    // Default expanded
+    expect(screen.getAllByTestId('timeline-step')).toHaveLength(1)
 
     const completedExecs = new Map([
       ['tc-1', makeExec('tc-1', 'bash', 'complete')],
     ])
     rerender(<ToolTimeline steps={steps} toolExecutions={completedExecs} />)
 
-    // Still collapsed after streaming ends
+    // Auto-collapsed after streaming ends
     expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
   })
 
-  it('does NOT auto-collapse when user has manually expanded', () => {
+  it('does NOT auto-collapse when user has manually toggled', () => {
     const steps = [makeStep('bash', 'tc-1')]
     const streamingExecs = new Map([
       ['tc-1', makeExec('tc-1', 'bash', 'inprogress')],
@@ -139,9 +136,10 @@ describe('ToolTimeline', () => {
       <ToolTimeline steps={steps} toolExecutions={streamingExecs} />,
     )
 
-    // User manually expands
+    // Default expanded; user collapses then re-expands (toggled = true)
     const btn = screen.getByRole('button', { name: /timeline/i })
-    fireEvent.click(btn)
+    fireEvent.click(btn) // collapse
+    fireEvent.click(btn) // expand
     expect(screen.getAllByTestId('timeline-step')).toHaveLength(1)
 
     const completedExecs = new Map([

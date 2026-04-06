@@ -42,7 +42,7 @@ export const ToolTimeline = memo(function ToolTimeline({
   streaming,
   classNames,
 }: ToolTimelineProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const userToggledRef = useRef(false)
   const prevStreamingRef = useRef<boolean | undefined>(undefined)
 
