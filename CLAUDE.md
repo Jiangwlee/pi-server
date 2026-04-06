@@ -26,6 +26,19 @@ HTTP Layer (Hono + @hono/node-server)
         三种模式: standalone / auth-server / auth-proxy
 ```
 
+### 前端三层架构（@pi-server/ui）
+
+```
+Transport (client/)  ←  State (state/)  ←  Render (components/)
+```
+
+- **Transport**: SSE 连接/帧解析、REST API、协议类型定义
+- **State**: 事件聚合、Turn 分组、工具状态解析
+- **Render**: React 组件、工具渲染器注册表
+- `hooks/` 为独立功能域 hook，不属于三层
+
+详见 `docs/architect/frontend-architect.md`。
+
 ## 项目结构
 
 ```
