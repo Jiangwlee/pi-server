@@ -14,8 +14,8 @@ export type MessageListClassNames = {
 } & MessageItemClassNames
 
 const defaults = {
-  root: 'flex flex-col',
-  wrapperBase: 'flex w-full px-4 py-2',
+  root: 'flex flex-col gap-12',
+  wrapperBase: 'flex w-full px-4',
   wrapperUser: 'justify-end',
   wrapperAssistant: 'justify-start',
 }
