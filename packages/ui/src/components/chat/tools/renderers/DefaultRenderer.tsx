@@ -97,11 +97,38 @@ function DefaultRendererView({ ctx }: { ctx: ToolRenderContext }) {
   )
 }
 
+function CompactView({ ctx }: { ctx: ToolRenderContext }) {
+  const text = extractResultText(ctx)
+  return (
+    <div
+      style={{
+        fontSize: 13,
+        lineHeight: 1.4,
+        opacity: 0.8,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {text || ctx.toolCall.name}
+    </div>
+  )
+}
+
 export const defaultRenderer: ToolRenderer = {
   render(ctx: ToolRenderContext): ToolRenderResult {
+    if (ctx.renderType === 'compact') {
+      return {
+        content: <CompactView ctx={ctx} />,
+        custom: true,
+      }
+    }
     return {
       content: <DefaultRendererView ctx={ctx} />,
       custom: false,
     }
+  },
+  supportsRenderType(renderType) {
+    return renderType === 'full' || renderType === 'compact'
   },
 }

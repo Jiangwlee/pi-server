@@ -186,6 +186,8 @@ export type ToolExecution = {
   partialResult?: ChatMessage
 }
 
+export type RenderType = 'full' | 'compact' | 'highlight' | 'inline'
+
 export type SSEEventType = 'pi' | 'status' | 'error'
 
 export type SSEEnvelope = {

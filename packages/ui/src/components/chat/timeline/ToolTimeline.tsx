@@ -15,6 +15,15 @@ import { CompletedHeader } from './CompletedHeader.js'
 import { TimelineStep } from './TimelineStep.js'
 import { DoneStep } from './DoneStep.js'
 import { AgentAvatar } from './AgentAvatar.js'
+import { CollapsedStreamingContent } from './CollapsedStreamingContent.js'
+import { getToolRenderer, defaultRenderer } from '../tools/index.js'
+
+function rendererSupportsCompact(toolName: string): boolean {
+  const renderer = getToolRenderer(toolName)
+  if (renderer) return renderer.supportsRenderType?.('compact') ?? false
+  // Unregistered tools fallback to defaultRenderer
+  return defaultRenderer.supportsRenderType?.('compact') ?? true
+}
 
 export interface ToolTimelineClassNames {
   root?: string
@@ -106,6 +115,17 @@ export const ToolTimeline = memo(function ToolTimeline({
           />
         )}
       </TimelineHeaderRow>
+
+      {(() => {
+        const lastStep = steps[steps.length - 1]
+        const lastExecution = lastStep ? toolExecutions?.get(lastStep.toolCall.id) : undefined
+        const showCollapsed = isStreaming && !isExpanded
+          && !!lastExecution?.partialResult
+          && rendererSupportsCompact(lastStep.toolCall.name)
+        return showCollapsed
+          ? <CollapsedStreamingContent step={lastStep} toolExecution={lastExecution!} />
+          : null
+      })()}
 
       {isExpanded && (
         <div>

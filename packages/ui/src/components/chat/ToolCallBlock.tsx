@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import type { ChatMessage, ToolCall } from '../../client/types.js'
+import type { ChatMessage, ToolCall, RenderType } from '../../client/types.js'
 import { renderTool } from './tools/index.js'
 
 export type ToolCallBlockClassNames = {
@@ -17,14 +17,16 @@ export const ToolCallBlock = memo(function ToolCallBlock({
   streaming,
   className,
   classNames,
+  renderType = 'full',
 }: {
   toolCall: ToolCall
   result?: ChatMessage
   streaming?: boolean
   className?: string
   classNames?: ToolCallBlockClassNames
+  renderType?: RenderType
 }) {
-  const { content, custom } = renderTool(toolCall, result, streaming)
+  const { content, custom } = renderTool(toolCall, result, streaming, renderType)
 
   if (custom) {
     return <div className={[classNames?.root, className].filter(Boolean).join(' ')}>{content}</div>
