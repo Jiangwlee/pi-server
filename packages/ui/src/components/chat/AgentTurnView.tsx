@@ -25,7 +25,7 @@ export const AgentTurnView = memo(function AgentTurnView({
   const hasSteps = turn.steps.length > 0
 
   return (
-    <div className="flex flex-col w-full" style={hasSteps ? getTimelineStyles() : undefined}>
+    <div className="flex flex-col w-full" style={getTimelineStyles()}>
       {hasSteps && (
         <ToolTimeline
           steps={turn.steps}
@@ -34,7 +34,7 @@ export const AgentTurnView = memo(function AgentTurnView({
         />
       )}
       {turn.finalAnswer && (
-        <div className="pl-[var(--tl-rail-width)]">
+        <div style={{ paddingLeft: 'var(--tl-header-padding-left)' }}>
           <MessageItem
             message={turn.finalAnswer}
             renderAvatar={renderAvatar}
