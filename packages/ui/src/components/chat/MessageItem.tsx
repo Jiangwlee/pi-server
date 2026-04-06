@@ -102,9 +102,9 @@ export const MessageItem = memo(function MessageItem({
     const contentClass = classNames?.content ?? defaults.contentUser
 
     return (
-      <div className={rootClassName} data-role="user">
+      <div className={[rootClassName, 'justify-end'].join(' ')} data-role="user">
         {renderAvatar?.(message)}
-        <div className="flex flex-col">
+        <div className="flex flex-col items-end">
           <div className={contentClass}>
             {message.attachments && message.attachments.length > 0 ? (
               <div className={classNames?.attachments ?? defaults.attachments}>

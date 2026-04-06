@@ -37,7 +37,7 @@ function IconStop() {
 }
 
 const defaults = {
-  root: 'flex justify-between items-center gap-2 px-3 pb-2',
+  root: 'flex items-center justify-between px-2 pb-2',
   button: 'flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-accent text-accent-foreground transition-opacity duration-fast hover:opacity-85 disabled:opacity-40',
   hint: 'text-xs text-text-muted',
 }
@@ -54,17 +54,17 @@ const ChatSendButtonImpl = function ChatSendButton(
     rightAddons,
   }: ChatSendButtonProps,
 ) {
-  const hintText = texts?.hint ?? '↵ send'
-
   return (
     <div
       className={[classNames?.root ?? defaults.root, className].filter(Boolean).join(' ')}
     >
-      {leftAddons}
+      <div className="flex items-center gap-1">
+        {leftAddons}
+      </div>
       <div className="flex items-center gap-2">
-        {!loading ? (
+        {texts?.hint && !loading ? (
           <span className={classNames?.hint ?? defaults.hint}>
-            {hintText}
+            {texts.hint}
           </span>
         ) : null}
         {rightAddons}
