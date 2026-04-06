@@ -14,6 +14,7 @@ import { StreamingHeader } from './StreamingHeader.js'
 import { CompletedHeader } from './CompletedHeader.js'
 import { TimelineStep } from './TimelineStep.js'
 import { DoneStep } from './DoneStep.js'
+import { AgentAvatar } from './AgentAvatar.js'
 
 export interface ToolTimelineClassNames {
   root?: string
@@ -88,7 +89,7 @@ export const ToolTimeline = memo(function ToolTimeline({
       style={getTimelineStyles()}
       data-testid="tool-timeline"
     >
-      <TimelineHeaderRow showRoundedBottom={!isExpanded}>
+      <TimelineHeaderRow left={<AgentAvatar size={24} />}>
         {isStreaming ? (
           <StreamingHeader
             toolName={currentToolName}

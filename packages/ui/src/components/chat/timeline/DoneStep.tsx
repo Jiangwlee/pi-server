@@ -11,7 +11,7 @@ function CheckCircleIcon() {
       height="12"
       viewBox="0 0 16 16"
       fill="none"
-      style={{ color: 'var(--color-text-02, #71717a)' }}
+      style={{ color: 'var(--tl-text-02, rgba(0,0,0,0.45))' }}
     >
       <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
       <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -30,7 +30,7 @@ export const DoneStep = memo(function DoneStep() {
             className="w-px"
             style={{
               height: 'calc(var(--tl-step-top-padding) * 2)',
-              backgroundColor: 'var(--tl-connector-color)',
+              backgroundColor: 'var(--tl-border-01, #e6e6e6)',
             }}
           />
           {/* Icon */}
@@ -47,9 +47,12 @@ export const DoneStep = memo(function DoneStep() {
         </div>
       </div>
       {/* Content */}
-      <div className="flex-1 min-w-0 rounded-b-xl bg-black/[0.02] dark:bg-white/[0.03] transition-colors duration-200">
+      <div
+        className="flex-1 min-w-0 rounded-b-xl transition-colors duration-200"
+        style={{ backgroundColor: 'var(--tl-bg-tint-00, rgba(0,0,0,0.02))' }}
+      >
         <div className="flex items-center h-[var(--tl-step-header-height)] pl-2">
-          <span className="text-xs text-muted/80">Done</span>
+          <span className="text-xs" style={{ color: 'var(--tl-text-02, rgba(0,0,0,0.45))' }}>Done</span>
         </div>
       </div>
     </div>

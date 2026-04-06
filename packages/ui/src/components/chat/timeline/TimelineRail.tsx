@@ -29,7 +29,7 @@ export const TimelineRail = memo(function TimelineRail({
           className="w-px"
           style={{
             height: 'calc(var(--tl-step-top-padding) * 2)',
-            backgroundColor: isFirst ? 'transparent' : 'var(--tl-connector-color)',
+            backgroundColor: isFirst ? 'transparent' : 'var(--tl-border-01, #e6e6e6)',
           }}
           data-testid="rail-top-connector"
           data-visible={!isFirst}
@@ -48,14 +48,14 @@ export const TimelineRail = memo(function TimelineRail({
         {/* Bottom connector within header row */}
         <div
           className="w-px flex-1"
-          style={{ backgroundColor: 'var(--tl-connector-color)' }}
+          style={{ backgroundColor: 'var(--tl-border-01, #e6e6e6)' }}
         />
       </div>
       {/* Bottom connector extending to next step */}
       {!isLast && (
         <div
           className="w-px flex-1"
-          style={{ backgroundColor: 'var(--tl-connector-color)' }}
+          style={{ backgroundColor: 'var(--tl-border-01, #e6e6e6)' }}
           data-testid="rail-bottom-connector"
           data-visible={!isLast}
         />

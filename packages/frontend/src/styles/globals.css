@@ -50,6 +50,14 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
 
+  /* ── Timeline (Onyx-aligned) ─────────────────────────────────────────── */
+  --tl-text-02: rgba(0, 0, 0, 0.45);       /* icon stroke, muted labels */
+  --tl-text-04: rgba(0, 0, 0, 0.75);       /* step header text */
+  --tl-border-01: #e6e6e6;                 /* connector lines */
+  --tl-bg-tint-00: rgba(0, 0, 0, 0.02);    /* surface background */
+  --shimmer-base: #a3a3a3;
+  --shimmer-highlight: #000000;
+
   /* ── Scrollbar ───────────────────────────────────────────────────────── */
   --scrollbar-thumb: rgba(0, 0, 0, 0.15);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
@@ -93,6 +101,13 @@
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  --tl-text-02: rgba(255, 255, 255, 0.45);
+  --tl-text-04: rgba(255, 255, 255, 0.85);
+  --tl-border-01: #333333;
+  --tl-bg-tint-00: rgba(255, 255, 255, 0.03);
+  --shimmer-base: #5c5c5c;
+  --shimmer-highlight: #ffffff;
 
   --scrollbar-thumb: rgba(255, 255, 255, 0.12);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);

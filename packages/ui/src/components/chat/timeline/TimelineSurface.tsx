@@ -20,11 +20,13 @@ export const TimelineSurface = memo(function TimelineSurface({
   roundedBottom,
   background = 'tint',
 }: TimelineSurfaceProps) {
-  const bgClass = background === 'tint'
-    ? 'bg-black/[0.02] dark:bg-white/[0.03]'
-    : background === 'error'
-      ? 'bg-red-500/[0.06]'
-      : ''
+  const bgClass = background === 'error'
+    ? 'bg-red-500/[0.06]'
+    : ''
+
+  const bgStyle = background === 'tint'
+    ? { backgroundColor: 'var(--tl-bg-tint-00, rgba(0,0,0,0.02))' }
+    : undefined
 
   const classes = [
     'flex-1 min-w-0 transition-colors duration-200',
@@ -37,7 +39,7 @@ export const TimelineSurface = memo(function TimelineSurface({
     .join(' ')
 
   return (
-    <div className={classes} data-testid="timeline-surface">
+    <div className={classes} style={bgStyle} data-testid="timeline-surface">
       {children}
     </div>
   )

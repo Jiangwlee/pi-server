@@ -38,8 +38,8 @@ export const ToolHeader = memo(function ToolHeader({
 })
 
 /**
- * StateIcon — 12px timeline-scale icon matching Onyx's stroke-text-02 style.
- * Used in both ToolHeader and TimelineRail.
+ * StateIcon — matches Onyx's icon sizing (--tl-icon-size = 0.75rem = 12px)
+ * and color (stroke-text-02 = --tl-text-02).
  */
 export function StateIcon({
   state,
@@ -57,10 +57,9 @@ export function StateIcon({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    // Onyx uses stroke-text-02 — a muted gray, not bright colors
     color: state === 'error'
-      ? 'var(--color-error, #ef4444)'
-      : 'var(--color-text-02, #71717a)',
+      ? 'var(--danger, #ef4444)'
+      : 'var(--tl-text-02, rgba(0,0,0,0.45))',
   }
 
   if (state === 'error') {
