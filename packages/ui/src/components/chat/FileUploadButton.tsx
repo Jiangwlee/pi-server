@@ -1,4 +1,5 @@
 import { memo, useCallback, useRef } from 'react'
+import { SvgPaperclip } from '../icons/index.js'
 
 export type FileUploadButtonClassNames = {
   root?: string
@@ -7,7 +8,7 @@ export type FileUploadButtonClassNames = {
 }
 
 const defaults = {
-  button: 'border-none bg-transparent py-1 px-2 font-inherit text-lg cursor-pointer disabled:opacity-40 disabled:cursor-default',
+  button: 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border-none bg-transparent text-text-secondary cursor-pointer transition-colors duration-fast hover:bg-hover hover:text-text-primary disabled:opacity-40 disabled:cursor-default',
 }
 
 export type FileUploadButtonProps = {
@@ -16,7 +17,6 @@ export type FileUploadButtonProps = {
   className?: string
   classNames?: FileUploadButtonClassNames
   accept?: string
-  label?: string
 }
 
 export const FileUploadButton = memo(function FileUploadButton(
@@ -26,7 +26,6 @@ export const FileUploadButton = memo(function FileUploadButton(
     className,
     classNames,
     accept = 'image/jpeg,image/png,image/gif,image/webp',
-    label = '📎',
   }: FileUploadButtonProps,
 ) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -52,7 +51,7 @@ export const FileUploadButton = memo(function FileUploadButton(
         disabled={disabled}
         aria-label="Upload file"
       >
-        {label}
+        <SvgPaperclip size={16} />
       </button>
       <input
         ref={inputRef}
