@@ -44,7 +44,10 @@ export const ThinkingBlock = memo(function ThinkingBlock(
       }, 1000)
       return () => clearInterval(interval)
     }
-    // Reset so re-streaming starts from zero
+    // streaming just ended — capture final elapsed before resetting ref
+    if (startTimeRef.current) {
+      setElapsed(Math.round((Date.now() - startTimeRef.current) / 1000))
+    }
     startTimeRef.current = null
     return undefined
   }, [streaming, startTime])
