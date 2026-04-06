@@ -58,6 +58,7 @@ export const ModelSelector = memo(function ModelSelector(
           <p className="text-xs font-medium text-text-secondary mb-1">Model</p>
         </div>
         <div className="h-px bg-border mb-1" />
+        <div className="overflow-y-auto max-h-[min(24rem,60vh)]">
         {models.map((model) => {
           const val = getModelOptionValue(model)
           const isSelected = val === value
@@ -79,6 +80,7 @@ export const ModelSelector = memo(function ModelSelector(
             </button>
           )
         })}
+        </div>
       </PopoverContent>
     </PopoverRoot>
   )
