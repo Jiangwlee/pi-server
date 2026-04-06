@@ -14,18 +14,32 @@ export type ChatSendButtonProps = {
   className?: string
   classNames?: ChatSendButtonClassNames
   texts?: {
-    send?: string
-    stop?: string
     hint?: string
   }
   leftAddons?: ReactNode
   rightAddons?: ReactNode
 }
 
+function IconArrowUp() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M8 13V3M3 8l5-5 5 5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function IconStop() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+      <rect x="1.5" y="1.5" width="9" height="9" rx="2"/>
+    </svg>
+  )
+}
+
 const defaults = {
-  root: 'flex justify-between items-center gap-2 px-3',
-  button: 'cursor-pointer border-none py-1.5 px-4 rounded-md font-inherit',
-  hint: 'text-xs text-inherit opacity-50',
+  root: 'flex justify-between items-center gap-2 px-3 pb-2',
+  button: 'flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-accent text-accent-foreground transition-opacity duration-fast hover:opacity-85 disabled:opacity-40',
+  hint: 'text-xs text-text-muted',
 }
 
 const ChatSendButtonImpl = function ChatSendButton(
@@ -40,9 +54,7 @@ const ChatSendButtonImpl = function ChatSendButton(
     rightAddons,
   }: ChatSendButtonProps,
 ) {
-  const sendText = texts?.send ?? 'Send'
-  const stopText = texts?.stop ?? 'Stop'
-  const hintText = texts?.hint ?? `↵ ${sendText}`
+  const hintText = texts?.hint ?? '↵ send'
 
   return (
     <div
@@ -59,18 +71,20 @@ const ChatSendButtonImpl = function ChatSendButton(
         {loading ? (
           <button
             type="button"
+            aria-label="Stop"
             className={classNames?.button ?? defaults.button}
             onClick={onStop}
           >
-            {stopText}
+            <IconStop />
           </button>
         ) : (
           <button
             type="button"
+            aria-label="Send"
             className={classNames?.button ?? defaults.button}
             onClick={onSend}
           >
-            {sendText}
+            <IconArrowUp />
           </button>
         )}
       </div>
