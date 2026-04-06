@@ -330,6 +330,12 @@ code {
   border: 1px solid var(--border);
 }
 
+.pi-code-block.pi-code-block--borderless {
+  border: none;
+  margin: 0;
+  border-radius: 0;
+}
+
 .pi-code-block pre {
   margin: 0;
   padding: 1em 1.25em;

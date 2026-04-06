@@ -4,5 +4,7 @@
  */
 import { registerToolRenderer } from './registry.js'
 import { bashRenderer } from './renderers/BashRenderer.js'
+import { readRenderer } from './renderers/ReadRenderer.js'
 
 registerToolRenderer('bash', bashRenderer)
+registerToolRenderer('read', readRenderer)
