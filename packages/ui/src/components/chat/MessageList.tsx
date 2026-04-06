@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import type { ChatMessage } from '../../client/types.js'
 import { MessageItem, type MessageItemClassNames } from './MessageItem.js'
@@ -5,14 +6,30 @@ import { MessageItem, type MessageItemClassNames } from './MessageItem.js'
 type MessageListClassNames = {
   root?: string
   item?: string
+  itemWrapper?: string
+  itemWrapperUser?: string
+  itemWrapperAssistant?: string
 } & MessageItemClassNames
+
+const defaults = {
+  root: 'flex flex-col',
+  wrapperBase: 'flex w-full px-4 py-2',
+  wrapperUser: 'justify-end',
+  wrapperAssistant: 'justify-start',
+}
 
 export function MessageList({
   messages,
+  renderAvatar,
+  onCopy,
+  onRegenerate,
   className,
   classNames,
 }: {
   messages: ChatMessage[]
+  renderAvatar?: (message: ChatMessage) => ReactNode
+  onCopy?: (message: ChatMessage) => void
+  onRegenerate?: (message: ChatMessage) => void
   className?: string
   classNames?: MessageListClassNames
 }) {
@@ -41,21 +58,33 @@ export function MessageList({
     return ids
   }, [messages, toolResultsByCallId])
 
+  function getWrapperClass(role: string) {
+    if (classNames?.itemWrapper) return classNames.itemWrapper
+    const roleClass = role === 'user'
+      ? (classNames?.itemWrapperUser ?? defaults.wrapperUser)
+      : (classNames?.itemWrapperAssistant ?? defaults.wrapperAssistant)
+    return `${defaults.wrapperBase} ${roleClass}`
+  }
+
   return (
-    <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
+    <div className={[classNames?.root ?? defaults.root, className].filter(Boolean).join(' ')}>
       {messages.map((message) => {
         // Hide tool messages that are rendered inline with their tool call
         if (message.role === 'tool' && message.toolCallId && inlinedToolCallIds.has(message.toolCallId)) {
           return null
         }
         return (
-          <MessageItem
-            key={message.id}
-            message={message}
-            toolResultsByCallId={toolResultsByCallId}
-            className={classNames?.item}
-            classNames={classNames}
-          />
+          <div key={message.id} className={getWrapperClass(message.role)}>
+            <MessageItem
+              message={message}
+              toolResultsByCallId={toolResultsByCallId}
+              renderAvatar={renderAvatar}
+              onCopy={onCopy}
+              onRegenerate={onRegenerate}
+              className={classNames?.item}
+              classNames={classNames}
+            />
+          </div>
         )
       })}
     </div>

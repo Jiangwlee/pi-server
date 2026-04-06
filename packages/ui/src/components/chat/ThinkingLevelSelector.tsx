@@ -16,6 +16,10 @@ const THINKING_LEVELS: { value: ThinkingLevel; label: string }[] = [
   { value: 'xhigh', label: 'XHigh' },
 ]
 
+const defaults = {
+  select: 'text-sm bg-transparent border border-border rounded-md px-2 py-1 cursor-pointer',
+}
+
 export const ThinkingLevelSelector = memo(function ThinkingLevelSelector({
   value,
   onChange,
@@ -32,7 +36,7 @@ export const ThinkingLevelSelector = memo(function ThinkingLevelSelector({
   return (
     <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
       <select
-        className={classNames?.select}
+        className={classNames?.select ?? defaults.select}
         value={value}
         onChange={(e) => onChange(e.target.value as ThinkingLevel)}
         disabled={disabled}

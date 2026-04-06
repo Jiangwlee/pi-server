@@ -1,16 +1,28 @@
 import { memo, useState } from 'react'
 import type { ThinkingContent } from '../../client/types.js'
 
+export type ThinkingBlockClassNames = {
+  root?: string
+  toggle?: string
+  content?: string
+}
+
+const defaults = {
+  content: 'whitespace-pre-wrap',
+}
+
 export const ThinkingBlock = memo(function ThinkingBlock(
   {
     content,
     streaming,
     className,
+    classNames,
     defaultExpanded,
   }: {
     content: ThinkingContent
     streaming?: boolean
     className?: string
+    classNames?: ThinkingBlockClassNames
     defaultExpanded?: boolean
   },
 ) {
@@ -20,10 +32,10 @@ export const ThinkingBlock = memo(function ThinkingBlock(
   const isExpanded = streaming ? true : expanded
 
   return (
-    <div className={className}>
+    <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
       <button
         type="button"
-        className={streaming ? 'thinking-streaming' : undefined}
+        className={[streaming ? 'thinking-streaming' : undefined, classNames?.toggle].filter(Boolean).join(' ') || undefined}
         onClick={() => {
           if (streaming) return
           setExpanded((prev) => !prev)
@@ -32,7 +44,7 @@ export const ThinkingBlock = memo(function ThinkingBlock(
         Thinking...
       </button>
       {isExpanded ? (
-        <div style={{ whiteSpace: 'pre-wrap' }}>
+        <div className={classNames?.content ?? defaults.content}>
           {content.redacted ? '[Redacted]' : content.thinking}
         </div>
       ) : null}

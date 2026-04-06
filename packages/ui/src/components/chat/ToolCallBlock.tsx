@@ -7,6 +7,10 @@ export type ToolCallBlockClassNames = {
   card?: string
 }
 
+const defaults = {
+  card: 'py-2.5 px-3 border border-border rounded-lg bg-panel',
+}
+
 export const ToolCallBlock = memo(function ToolCallBlock({
   toolCall,
   result,
@@ -29,13 +33,7 @@ export const ToolCallBlock = memo(function ToolCallBlock({
   return (
     <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
       <div
-        className={classNames?.card}
-        style={{
-          padding: '10px 12px',
-          border: '1px solid var(--color-border, rgba(128, 128, 128, 0.15))',
-          borderRadius: 8,
-          background: 'var(--color-card-bg, rgba(128, 128, 128, 0.03))',
-        }}
+        className={classNames?.card ?? defaults.card}
       >
         {content}
       </div>

@@ -27,6 +27,14 @@ export type ChatInputProps = {
   ref?: Ref<HTMLTextAreaElement>
 }
 
+const defaults = {
+  root: 'relative',
+  textarea: 'w-full resize-none bg-transparent outline-none text-sm leading-6 px-3 py-2',
+  dragOverlay: 'absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-current bg-black/10 pointer-events-none opacity-80',
+  topAddons: '',
+  bottomAddons: '',
+}
+
 export const ChatInput = memo(function ChatInput(
   {
     value,
@@ -144,37 +152,21 @@ export const ChatInput = memo(function ChatInput(
 
   return (
     <div
-      className={[classNames?.root, className].filter(Boolean).join(' ')}
-      style={{ position: 'relative' }}
+      className={[classNames?.root ?? defaults.root, className].filter(Boolean).join(' ')}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {isDragging ? (
-        <div
-          className={classNames?.dragOverlay}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 10,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 'inherit',
-            border: '2px dashed currentColor',
-            background: 'rgba(128, 128, 128, 0.1)',
-            pointerEvents: 'none',
-            opacity: 0.8,
-          }}
-        >
+        <div className={classNames?.dragOverlay ?? defaults.dragOverlay}>
           Drop files here
         </div>
       ) : null}
-      {topAddons ? <div className={classNames?.topAddons}>{topAddons}</div> : null}
+      {topAddons ? <div className={classNames?.topAddons ?? defaults.topAddons}>{topAddons}</div> : null}
       <textarea
         ref={setTextareaRef}
-        className={classNames?.textarea}
+        className={classNames?.textarea ?? defaults.textarea}
         value={value ?? ''}
         onChange={(event) => { onInput?.(event.target.value) }}
         onKeyDown={handleKeyDown}
@@ -186,7 +178,7 @@ export const ChatInput = memo(function ChatInput(
         rows={minRows}
       />
 
-      {bottomAddons ? <div className={classNames?.bottomAddons}>{bottomAddons}</div> : null}
+      {bottomAddons ? <div className={classNames?.bottomAddons ?? defaults.bottomAddons}>{bottomAddons}</div> : null}
     </div>
   )
 })

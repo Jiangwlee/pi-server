@@ -22,6 +22,12 @@ export type ChatSendButtonProps = {
   rightAddons?: ReactNode
 }
 
+const defaults = {
+  root: 'flex justify-between items-center gap-2 px-3',
+  button: 'cursor-pointer border-none py-1.5 px-4 rounded-md font-inherit',
+  hint: 'text-xs text-inherit opacity-50',
+}
+
 const ChatSendButtonImpl = function ChatSendButton(
   {
     loading,
@@ -40,25 +46,12 @@ const ChatSendButtonImpl = function ChatSendButton(
 
   return (
     <div
-      className={[classNames?.root, className].filter(Boolean).join(' ')}
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 8,
-        padding: '0 12px',
-      }}
+      className={[classNames?.root ?? defaults.root, className].filter(Boolean).join(' ')}
     >
       {leftAddons}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
+      <div className="flex items-center gap-2">
         {!loading ? (
-          <span className={classNames?.hint} style={{ fontSize: 12, color: 'inherit', opacity: 0.5 }}>
+          <span className={classNames?.hint ?? defaults.hint}>
             {hintText}
           </span>
         ) : null}
@@ -66,30 +59,16 @@ const ChatSendButtonImpl = function ChatSendButton(
         {loading ? (
           <button
             type="button"
-            className={classNames?.button}
+            className={classNames?.button ?? defaults.button}
             onClick={onStop}
-            style={{
-              cursor: 'pointer',
-              border: 'none',
-              padding: '6px 16px',
-              borderRadius: 6,
-              font: 'inherit',
-            }}
           >
             {stopText}
           </button>
         ) : (
           <button
             type="button"
-            className={classNames?.button}
+            className={classNames?.button ?? defaults.button}
             onClick={onSend}
-            style={{
-              cursor: 'pointer',
-              border: 'none',
-              padding: '6px 16px',
-              borderRadius: 6,
-              font: 'inherit',
-            }}
           >
             {sendText}
           </button>

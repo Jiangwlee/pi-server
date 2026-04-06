@@ -23,6 +23,14 @@ export type CodeBlockClassNames = {
   code?: string
 }
 
+const defaults = {
+  root: 'rounded-lg border border-border overflow-hidden my-2',
+  header: 'flex items-center justify-between px-3 py-1.5 bg-panel-elevated text-xs',
+  language: 'text-muted',
+  copyButton: 'text-muted hover:text-primary cursor-pointer border-none bg-transparent text-xs',
+  code: 'block overflow-x-auto p-3 text-sm',
+}
+
 function CopyButton({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false)
 
@@ -39,7 +47,7 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className={className}
+      className={className ?? defaults.copyButton}
       aria-label="Copy code"
     >
       {copied ? 'Copied!' : 'Copy'}
@@ -66,9 +74,11 @@ export const CodeBlock = memo(function CodeBlock({
 
   let codeContent: ReactNode
 
+  const codeCls = classNames?.code ?? defaults.code
+
   if (streaming && lines.length > 0) {
     codeContent = (
-      <code className={[className, classNames?.code].filter(Boolean).join(' ')}>
+      <code className={[className, codeCls].filter(Boolean).join(' ')}>
         {lines.map((line, lineIndex) => (
           <span key={`line-${lineIndex}`}>
             {line.map((token, tokenIndex) => (
@@ -89,22 +99,22 @@ export const CodeBlock = memo(function CodeBlock({
     const codeMatch = /<code[^>]*>([\s\S]*)<\/code>/.exec(staticHtml)
     codeContent = codeMatch ? (
       <code
-        className={[className, classNames?.code].filter(Boolean).join(' ')}
+        className={[className, codeCls].filter(Boolean).join(' ')}
         dangerouslySetInnerHTML={{ __html: codeMatch[1] }}
       />
     ) : (
-      <code className={[className, classNames?.code].filter(Boolean).join(' ')}>{code}</code>
+      <code className={[className, codeCls].filter(Boolean).join(' ')}>{code}</code>
     )
   } else {
     codeContent = (
-      <code className={[className, classNames?.code].filter(Boolean).join(' ')}>{code}</code>
+      <code className={[className, codeCls].filter(Boolean).join(' ')}>{code}</code>
     )
   }
 
   return (
-    <div className={['pi-code-block', classNames?.root].filter(Boolean).join(' ')}>
-      <div className={['pi-code-block-header', classNames?.header].filter(Boolean).join(' ')}>
-        <span className={['pi-code-block-lang', classNames?.language].filter(Boolean).join(' ')}>
+    <div className={['pi-code-block', classNames?.root ?? defaults.root].filter(Boolean).join(' ')}>
+      <div className={['pi-code-block-header', classNames?.header ?? defaults.header].filter(Boolean).join(' ')}>
+        <span className={['pi-code-block-lang', classNames?.language ?? defaults.language].filter(Boolean).join(' ')}>
           {language}
         </span>
         <CopyButton text={code} className={classNames?.copyButton} />

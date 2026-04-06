@@ -6,6 +6,10 @@ export type FileUploadButtonClassNames = {
   input?: string
 }
 
+const defaults = {
+  button: 'border-none bg-transparent py-1 px-2 font-inherit text-lg cursor-pointer disabled:opacity-40 disabled:cursor-default',
+}
+
 export type FileUploadButtonProps = {
   onFiles?: (files: File[]) => void
   disabled?: boolean
@@ -43,19 +47,10 @@ export const FileUploadButton = memo(function FileUploadButton(
     <div className={[classNames?.root, className].filter(Boolean).join(' ')}>
       <button
         type="button"
-        className={classNames?.button}
+        className={classNames?.button ?? defaults.button}
         onClick={handleClick}
         disabled={disabled}
         aria-label="Upload file"
-        style={{
-          cursor: disabled ? 'default' : 'pointer',
-          border: 'none',
-          background: 'none',
-          padding: '4px 8px',
-          font: 'inherit',
-          fontSize: 18,
-          opacity: disabled ? 0.4 : 1,
-        }}
       >
         {label}
       </button>

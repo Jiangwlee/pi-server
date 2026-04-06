@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useChat } from '../../hooks/use-chat.js'
+import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type ChatMessage, useChat } from '../../hooks/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
 import { useFileUpload } from '../../hooks/use-file-upload.js'
 import { useAutoScroll } from '../../hooks/use-auto-scroll.js'
@@ -10,6 +10,11 @@ import { FileUploadButton } from './FileUploadButton.js'
 import { AttachmentPreview } from './AttachmentPreview.js'
 import { ThinkingLevelSelector } from './ThinkingLevelSelector.js'
 import { MessageList } from './MessageList.js'
+
+const defaults = {
+  messageListWrapper: 'flex-1 overflow-y-auto relative',
+  scrollToBottom: 'sticky bottom-2 block mx-auto z-5 w-8 h-8 rounded-full border border-border bg-panel shadow-sm cursor-pointer text-sm',
+}
 
 type ChatPanelClassNames = {
   root?: string
@@ -36,10 +41,12 @@ export function ChatPanel(
     sessionId,
     className,
     classNames,
+    renderAvatar,
   }: {
     sessionId: string
     className?: string
     classNames?: ChatPanelClassNames
+    renderAvatar?: (message: ChatMessage) => ReactNode
   },
 ) {
   const { messages, status, error, send, abort } = useChat({ sessionId })
@@ -101,8 +108,7 @@ export function ChatPanel(
       </header>
       <div
         ref={scrollRef as React.RefObject<HTMLDivElement>}
-        className={classNames?.messageListWrapper}
-        style={{ flex: 1, overflowY: 'auto', position: 'relative' }}
+        className={classNames?.messageListWrapper ?? defaults.messageListWrapper}
       >
         <MessageList
           messages={messages}
@@ -113,20 +119,14 @@ export function ChatPanel(
             assistant: classNames?.messageAssistant,
             tool: classNames?.messageTool,
           }}
+          renderAvatar={renderAvatar}
         />
         {!isAtBottom ? (
           <button
             type="button"
             onClick={scrollToBottom}
-            className={classNames?.scrollToBottom}
+            className={classNames?.scrollToBottom ?? defaults.scrollToBottom}
             aria-label="Scroll to bottom"
-            style={{
-              position: 'sticky',
-              bottom: 8,
-              display: 'block',
-              margin: '0 auto',
-              zIndex: 5,
-            }}
           >
             ↓
           </button>
