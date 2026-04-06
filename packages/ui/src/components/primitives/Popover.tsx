@@ -17,7 +17,7 @@ const widthClasses = {
 
 export type PopoverWidth = keyof typeof widthClasses
 
-export type PopoverContentProps = RadixPopover.PopoverContentProps & {
+export type PopoverContentProps = Omit<RadixPopover.PopoverContentProps, 'width'> & {
   width?: PopoverWidth
 }
 
