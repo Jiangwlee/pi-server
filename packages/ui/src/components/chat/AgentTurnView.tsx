@@ -5,6 +5,7 @@ import type { AgentTurn } from '../../state/group-messages.js'
 import type { MessageItemClassNames } from './MessageItem.js'
 import { MessageItem } from './MessageItem.js'
 import { ToolTimeline } from './timeline/index.js'
+import { getTimelineStyles } from './timeline/tokens.js'
 
 export const AgentTurnView = memo(function AgentTurnView({
   turn,
@@ -24,7 +25,7 @@ export const AgentTurnView = memo(function AgentTurnView({
   const hasSteps = turn.steps.length > 0
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full" style={hasSteps ? getTimelineStyles() : undefined}>
       {hasSteps && (
         <ToolTimeline
           steps={turn.steps}
@@ -33,13 +34,15 @@ export const AgentTurnView = memo(function AgentTurnView({
         />
       )}
       {turn.finalAnswer && (
-        <MessageItem
-          message={turn.finalAnswer}
-          renderAvatar={renderAvatar}
-          onCopy={onCopy}
-          onRegenerate={onRegenerate}
-          classNames={classNames}
-        />
+        <div className="pl-[var(--tl-rail-width)]">
+          <MessageItem
+            message={turn.finalAnswer}
+            renderAvatar={renderAvatar}
+            onCopy={onCopy}
+            onRegenerate={onRegenerate}
+            classNames={classNames}
+          />
+        </div>
       )}
     </div>
   )
