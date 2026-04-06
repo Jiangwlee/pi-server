@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveToolState } from '../../src/tools/index.js'
+import { resolveToolState } from '../../src/state/resolve-tool-state.js'
 import type { ChatMessage } from '../../src/client/types.js'
 
 function makeResult(overrides: Partial<ChatMessage> = {}): ChatMessage {

@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import type { ChatMessage, ToolExecution } from '../../client/types.js'
 import { MessageItem, type MessageItemClassNames } from './MessageItem.js'
 import { AgentTurnView } from './AgentTurnView.js'
-import { groupMessagesIntoTurns } from './groupMessages.js'
+import { groupMessagesIntoTurns } from '../../state/group-messages.js'
 
 export type MessageListClassNames = {
   root?: string

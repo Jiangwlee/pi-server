@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { groupMessagesIntoTurns } from '../../../src/components/chat/groupMessages.js'
+import { groupMessagesIntoTurns } from '../../../src/state/group-messages.js'
 import type { ChatMessage } from '../../../src/client/types.js'
 
 function userMsg(id: string, text: string): ChatMessage {

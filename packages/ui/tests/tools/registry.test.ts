@@ -3,7 +3,7 @@ import {
   registerToolRenderer,
   getToolRenderer,
   getRegisteredToolNames,
-} from '../../src/tools/registry.js'
+} from '../../src/components/chat/tools/registry.js'
 
 // Registry is module-level global, so tests may leak state.
 // We test additive behavior only.

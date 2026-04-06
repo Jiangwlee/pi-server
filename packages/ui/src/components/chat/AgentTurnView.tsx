@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import type { ReactNode } from 'react'
 import type { ToolExecution } from '../../client/types.js'
-import type { AgentTurn } from './groupMessages.js'
+import type { AgentTurn } from '../../state/group-messages.js'
 import type { MessageItemClassNames } from './MessageItem.js'
 import { MessageItem } from './MessageItem.js'
 import { ToolTimeline } from './timeline/index.js'

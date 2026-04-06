@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import type { ChatMessage, ToolCall } from '../../client/types.js'
-import { renderTool } from '../../tools/index.js'
+import { renderTool } from './tools/index.js'
 
 export type ToolCallBlockClassNames = {
   root?: string

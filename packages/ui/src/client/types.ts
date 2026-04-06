@@ -172,12 +172,16 @@ export type SessionHistoryEntry = {
   }
 }
 
+// --- Tool render/execution state ---
+
+export type ToolRenderState = 'inprogress' | 'complete' | 'error'
+
 // --- Tool execution tracking (for timeline UI) ---
 
 export type ToolExecution = {
   toolCallId: string
   toolName: string
-  state: 'inprogress' | 'complete' | 'error'
+  state: ToolRenderState
   startTime: number
   partialResult?: ChatMessage
 }

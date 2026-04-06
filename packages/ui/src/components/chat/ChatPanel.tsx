@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
-import { type ChatMessage, useChat } from '../../hooks/use-chat.js'
+import { type ChatMessage, useChat } from '../../state/use-chat.js'
 import { useModels } from '../../hooks/use-models.js'
 import { useFileUpload } from '../../hooks/use-file-upload.js'
 import { useAutoScroll } from '../../hooks/use-auto-scroll.js'

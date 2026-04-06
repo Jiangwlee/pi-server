@@ -10,7 +10,7 @@ import {
   getTextContent,
   type ChatSSEConnect,
   type ChatMessage,
-} from '../../src/hooks/use-chat.js'
+} from '../../src/state/use-chat.js'
 import type { SessionHistoryEntry, ContentBlock, AssistantMessageEvent } from '../../src/client/types.js'
 
 function makeConnect() {

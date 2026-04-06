@@ -4,7 +4,6 @@
  */
 export * from './use-auth.js'
 export * from './use-sessions.js'
-export * from './use-chat.js'
 export * from './use-models.js'
 export * from './use-file-upload.js'
 export * from './use-auto-scroll.js'

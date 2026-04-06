@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import type { ChatMessage, ToolCall } from '../client/types.js'
+import type { ChatMessage, ToolCall, ToolRenderState } from '../../../client/types.js'
 
-export type ToolRenderState = 'inprogress' | 'complete' | 'error'
+export type { ToolRenderState }
 
 export type ToolRenderResult = {
   content: ReactNode

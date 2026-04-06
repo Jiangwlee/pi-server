@@ -1,4 +1,4 @@
-import type { ChatMessage, ToolCall } from '../../client/types.js'
+import type { ChatMessage, ToolCall } from '../client/types.js'
 
 export type ToolStep = {
   toolCall: ToolCall
