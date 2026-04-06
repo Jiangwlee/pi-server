@@ -18,6 +18,7 @@ import type {
   ThinkingContent,
   ThinkingLevel,
   ToolCall,
+  ToolExecution,
   Usage,
   StopReason,
 } from '../client/types.js'
@@ -45,6 +46,7 @@ type UseChatResult = {
   messages: ChatMessage[]
   status: SessionStatus
   error: string | null
+  toolExecutions: Map<string, ToolExecution>
   send: (message: string, options?: { model?: string; fileIds?: string[]; attachments?: ChatAttachment[]; thinkingLevel?: ThinkingLevel }) => Promise<void>
   abort: () => Promise<void>
   loadHistory: () => Promise<void>
@@ -107,7 +109,8 @@ function parseContent(raw: unknown): ContentBlock[] {
 }
 
 function toChatMessage(entry: SessionHistoryEntry, index: number): ChatMessage | null {
-  if (entry.type === 'toolResult') {
+  // toolResult can appear as entry.type === 'toolResult' or entry.message.role === 'toolResult'
+  if (entry.type === 'toolResult' || entry.message?.role === 'toolResult') {
     const msg = entry.message
     return {
       id: 'history-tool-' + index,
@@ -130,6 +133,20 @@ function toChatMessage(entry: SessionHistoryEntry, index: number): ChatMessage |
     stopReason: msg.stopReason,
     model: msg.model,
     timestamp: msg.timestamp,
+  }
+}
+
+function toPartialChatMessage(event: {
+  toolCallId: string; toolName: string; partialResult: unknown
+}): ChatMessage {
+  const pr = event.partialResult as { content?: unknown[]; details?: unknown }
+  return {
+    id: `partial-${event.toolCallId}`,
+    role: 'tool',
+    content: Array.isArray(pr?.content) ? parseContent(pr.content) : [],
+    toolCallId: event.toolCallId,
+    toolName: event.toolName,
+    isError: false,
   }
 }
 
@@ -234,6 +251,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [status, setStatus] = useState<SessionStatus>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [toolExecutions, setToolExecutions] = useState<Map<string, ToolExecution>>(new Map())
   const streamMsgRef = useRef<string | null>(null)
 
   const nextId = useCallback((prefix: string): string => {
@@ -254,6 +272,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
     setMessages([])
     setStatus('idle')
     setError(null)
+    setToolExecutions(new Map())
 
     const connection = connect({
       sessionId,
@@ -281,12 +300,53 @@ export function useChat(options: UseChatOptions): UseChatResult {
 
           switch (agentEvent.type) {
             case 'agent_start':
+              setToolExecutions(new Map())
+              break
+
             case 'turn_start':
-            case 'tool_execution_start':
-            case 'tool_execution_update':
-            case 'tool_execution_end':
               // no-op for now
               break
+
+            case 'tool_execution_start': {
+              const exec: ToolExecution = {
+                toolCallId: agentEvent.toolCallId,
+                toolName: agentEvent.toolName,
+                state: 'inprogress',
+                startTime: Date.now(),
+              }
+              setToolExecutions(prev => new Map(prev).set(agentEvent.toolCallId, exec))
+              break
+            }
+
+            case 'tool_execution_update': {
+              setToolExecutions(prev => {
+                const next = new Map(prev)
+                const existing = next.get(agentEvent.toolCallId)
+                if (existing) {
+                  next.set(agentEvent.toolCallId, {
+                    ...existing,
+                    partialResult: toPartialChatMessage(agentEvent),
+                  })
+                }
+                return next
+              })
+              break
+            }
+
+            case 'tool_execution_end': {
+              setToolExecutions(prev => {
+                const next = new Map(prev)
+                const existing = next.get(agentEvent.toolCallId)
+                if (existing) {
+                  next.set(agentEvent.toolCallId, {
+                    ...existing,
+                    state: agentEvent.isError ? 'error' : 'complete',
+                  })
+                }
+                return next
+              })
+              break
+            }
 
             case 'message_start': {
               // SDK emits message_start for both user and assistant messages.
@@ -397,6 +457,8 @@ export function useChat(options: UseChatOptions): UseChatResult {
             }
 
             case 'agent_end': {
+              // Clear stale tool executions before history reload replaces messages
+              setToolExecutions(new Map())
               // Reload history for authoritative state
               void loadHistory()
               break
@@ -459,6 +521,7 @@ export function useChat(options: UseChatOptions): UseChatResult {
     messages,
     status,
     error,
+    toolExecutions,
     send,
     abort,
     loadHistory,
@@ -468,4 +531,4 @@ export function useChat(options: UseChatOptions): UseChatResult {
 // Exported for testing
 export { toChatMessage, parseContent, applyDelta }
 
-export type { ChatMessage, ContentBlock, UseChatOptions, UseChatResult, ChatSSEConnect }
+export type { ChatMessage, ContentBlock, ToolExecution, UseChatOptions, UseChatResult, ChatSSEConnect }

@@ -172,6 +172,16 @@ export type SessionHistoryEntry = {
   }
 }
 
+// --- Tool execution tracking (for timeline UI) ---
+
+export type ToolExecution = {
+  toolCallId: string
+  toolName: string
+  state: 'inprogress' | 'complete' | 'error'
+  startTime: number
+  partialResult?: ChatMessage
+}
+
 export type SSEEventType = 'pi' | 'status' | 'error'
 
 export type SSEEnvelope = {

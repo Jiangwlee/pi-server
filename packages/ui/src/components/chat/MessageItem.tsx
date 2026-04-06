@@ -72,7 +72,6 @@ function renderMetadata(message: ChatMessage, classNames?: MessageItemClassNames
 
 export const MessageItem = memo(function MessageItem({
   message,
-  toolResultsByCallId,
   renderAvatar,
   onCopy,
   onRegenerate,
@@ -80,7 +79,6 @@ export const MessageItem = memo(function MessageItem({
   classNames,
 }: {
   message: ChatMessage
-  toolResultsByCallId?: Map<string, ChatMessage>
   renderAvatar?: (message: ChatMessage) => ReactNode
   onCopy?: (message: ChatMessage) => void
   onRegenerate?: (message: ChatMessage) => void
@@ -176,12 +174,10 @@ export const MessageItem = memo(function MessageItem({
               )
             }
             if (content.type === 'toolCall') {
-              const result = toolResultsByCallId?.get(content.id)
               return (
                 <ToolCallBlock
                   key={`${message.id}-toolCall-${index}`}
                   toolCall={content}
-                  result={result}
                   streaming={message.streaming}
                   className={classNames?.toolCallBlock}
                 />

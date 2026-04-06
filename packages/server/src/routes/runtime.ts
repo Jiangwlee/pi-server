@@ -187,11 +187,6 @@ export function createRuntimeRoutes(
         .split('\n')
         .filter(Boolean)
         .map(line => JSON.parse(line))
-        .filter((entry: { type?: string; message?: { role?: string } }) =>
-          entry.message?.role === 'user' ||
-          entry.message?.role === 'assistant' ||
-          entry.type === 'toolResult'
-        )
       return c.json({ messages: entries })
     } catch {
       logger.warn({

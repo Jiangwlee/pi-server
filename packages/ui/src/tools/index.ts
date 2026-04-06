@@ -1,6 +1,6 @@
 export type { ToolRenderState, ToolRenderResult, ToolRenderContext, ToolRenderer } from './types.js'
 export { registerToolRenderer, getToolRenderer, getRegisteredToolNames } from './registry.js'
-export { ToolHeader } from './renderers/ToolHeader.js'
+export { ToolHeader, StateIcon } from './renderers/ToolHeader.js'
 
 import type { ChatMessage, ToolCall } from '../client/types.js'
 import type { ToolRenderResult, ToolRenderState } from './types.js'

@@ -37,7 +37,7 @@ export const ToolHeader = memo(function ToolHeader({
   )
 })
 
-function StateIcon({
+export function StateIcon({
   state,
   className,
 }: {
