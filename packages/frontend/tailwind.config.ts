@@ -64,6 +64,9 @@ export default {
         fast: '150ms',
         normal: '200ms',
       },
+      transitionProperty: {
+        width: 'width',
+      },
     },
   },
   plugins: [],
