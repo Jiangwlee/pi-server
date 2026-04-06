@@ -35,7 +35,7 @@ describe('MessageItem', () => {
     )
 
     expect(screen.getByText('answer text')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Thinking...' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '▶Thought' })).toBeTruthy()
     expect(screen.getByText('runTool')).toBeTruthy()
     expect(screen.getByRole('img', { name: 'message image' })).toBeTruthy()
   })
