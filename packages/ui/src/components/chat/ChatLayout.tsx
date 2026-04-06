@@ -135,7 +135,7 @@ export const ChatLayout = memo(function ChatLayout({
               {SidebarInner}
             </aside>
           ) : null}
-          <main className={classNames?.main ?? 'flex-1 overflow-y-auto min-w-0'}>
+          <main className={classNames?.main ?? 'flex-1 overflow-hidden min-w-0'}>
             {children}
           </main>
         </div>
@@ -173,7 +173,7 @@ export const ChatLayout = memo(function ChatLayout({
               )}
             </>
           ) : null}
-          <main className={classNames?.main ?? 'flex-1 overflow-y-auto min-w-0'}>
+          <main className={classNames?.main ?? 'flex-1 overflow-hidden min-w-0'}>
             {children}
           </main>
         </div>
