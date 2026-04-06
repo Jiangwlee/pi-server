@@ -60,7 +60,7 @@ describe('ToolTimeline', () => {
     ])
 
     render(<ToolTimeline steps={steps} toolExecutions={toolExecutions} />)
-    expect(screen.getByText(/Used 2 tools/)).toBeTruthy()
+    expect(screen.getByText(/Thought for/)).toBeTruthy()
   })
 
   it('shows correct number of TimelineStep children when expanded', () => {
@@ -91,7 +91,9 @@ describe('ToolTimeline', () => {
 
     expect(screen.getAllByTestId('timeline-step')).toHaveLength(2)
 
-    const header = screen.getByRole('button', { name: /timeline/i })
+    // Click the outer role="button" div (CompletedHeader root)
+    const headers = screen.getAllByRole('button', { name: /timeline/i })
+    const header = headers[0] // outer div
     fireEvent.click(header)
     expect(screen.queryAllByTestId('timeline-step')).toHaveLength(0)
 

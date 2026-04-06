@@ -31,12 +31,11 @@ describe('TimelineRail', () => {
     expect(bottom.getAttribute('data-visible')).toBe('true')
   })
 
-  it('hides bottom connector when isLast', () => {
+  it('omits bottom connector when isLast', () => {
     render(<TimelineRail state="error" isLast />)
 
-    const bottom = screen.getByTestId('rail-bottom-connector')
-    expect(bottom.getAttribute('data-visible')).toBe('false')
-    expect(bottom.style.backgroundColor).toBe('transparent')
+    // Bottom connector should not be rendered at all when isLast
+    expect(screen.queryByTestId('rail-bottom-connector')).toBeNull()
 
     const top = screen.getByTestId('rail-top-connector')
     expect(top.getAttribute('data-visible')).toBe('true')

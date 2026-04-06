@@ -1,17 +1,8 @@
 /**
- * ToolTimeline — entry component for rendering tool call steps as a visual timeline.
+ * ToolTimeline — entry component matching Onyx's AgentTimeline layout.
  *
- * Manages the state machine (streaming vs completed), collapse control with user-intent
- * tracking, and composes TimelineHeaderRow + StreamingHeader/CompletedHeader + TimelineStep.
- *
- * Props:
- *   steps           — array of { toolCall, result? } from the grouped agent turn
- *   toolExecutions  — map of toolCallId -> ToolExecution (live state from SSE)
- *   streaming       — whether the agent turn is still active
- *   classNames      — optional { root?: string } for styling
- *
- * Usage:
- *   <ToolTimeline steps={steps} toolExecutions={execs} streaming={true} />
+ * Manages streaming vs completed state, collapse control with user-intent
+ * tracking, and composes TimelineHeaderRow + headers + steps + Done indicator.
  */
 import { memo, useState, useRef, useEffect } from 'react'
 import type { ToolExecution } from '../../../client/types.js'
@@ -22,6 +13,7 @@ import { TimelineHeaderRow } from './TimelineHeaderRow.js'
 import { StreamingHeader } from './StreamingHeader.js'
 import { CompletedHeader } from './CompletedHeader.js'
 import { TimelineStep } from './TimelineStep.js'
+import { DoneStep } from './DoneStep.js'
 
 export interface ToolTimelineClassNames {
   root?: string
@@ -84,13 +76,19 @@ export const ToolTimeline = memo(function ToolTimeline({
     setIsExpanded((prev) => !prev)
   }
 
+  // Show "Done" step when completed and expanded
+  const showDoneStep = !isStreaming && isExpanded && steps.length > 0
+
   return (
     <div
+      className={[
+        'flex flex-col pl-[var(--tl-agent-message-padding-left)]',
+        classNames?.root,
+      ].filter(Boolean).join(' ')}
       style={getTimelineStyles()}
-      className={classNames?.root}
       data-testid="tool-timeline"
     >
-      <TimelineHeaderRow>
+      <TimelineHeaderRow showRoundedBottom={!isExpanded}>
         {isStreaming ? (
           <StreamingHeader
             toolName={currentToolName}
@@ -107,29 +105,32 @@ export const ToolTimeline = memo(function ToolTimeline({
           />
         )}
       </TimelineHeaderRow>
-      {isExpanded &&
-        steps.map((step, i) => {
-          const execution = toolExecutions?.get(step.toolCall.id)
-          // Prefer live partial result, then step result
-          const result = execution?.partialResult ?? step.result
 
-          const state = execution
-            ? execution.state
-            : resolveToolState(result, streaming)
+      {isExpanded && (
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          {steps.map((step, i) => {
+            const execution = toolExecutions?.get(step.toolCall.id)
+            const result = execution?.partialResult ?? step.result
+            const state = execution
+              ? execution.state
+              : resolveToolState(result, streaming)
 
-          return (
-            <TimelineStep
-              key={step.toolCall.id}
-              toolCall={step.toolCall}
-              result={result}
-              state={state}
-              streaming={execution?.state === 'inprogress'}
-              isFirst={i === 0}
-              isLast={i === steps.length - 1}
-              isExpanded={true}
-            />
-          )
-        })}
+            return (
+              <TimelineStep
+                key={step.toolCall.id}
+                toolCall={step.toolCall}
+                result={result}
+                state={state}
+                streaming={execution?.state === 'inprogress'}
+                isFirst={i === 0}
+                isLast={i === steps.length - 1 && !showDoneStep}
+                isExpanded={true}
+              />
+            )
+          })}
+          {showDoneStep && <DoneStep />}
+        </div>
+      )}
     </div>
   )
 })

@@ -30,13 +30,11 @@ describe('StreamingHeader', () => {
     const { container } = render(
       <StreamingHeader toolName="bash" startTime={now} isExpanded={true} onToggle={() => {}} />,
     )
-    const scope = within(container)
 
     act(() => {
       vi.advanceTimersByTime(3000)
     })
 
-    // After 3 seconds of fake-timer advancement, elapsed should be positive
     expect(container.textContent).toMatch(/\d+s/)
   })
 
@@ -54,53 +52,63 @@ describe('StreamingHeader', () => {
     expect(onToggle).toHaveBeenCalledOnce()
   })
 
-  it('shows ▼ when expanded and ▶ when collapsed', () => {
+  it('renders fold/expand icon svgs', () => {
     const now = Date.now()
     vi.setSystemTime(now)
 
     const { container, rerender } = render(
       <StreamingHeader toolName="bash" startTime={now} isExpanded={true} onToggle={() => {}} />,
     )
-    const scope = within(container)
-    expect(scope.getByText('▼')).toBeTruthy()
+    // Expanded: fold icon (chevron up, points "18 15 12 9 6 15")
+    const svg = container.querySelector('button svg')!
+    const polyline = svg.querySelector('polyline')!
+    expect(polyline.getAttribute('points')).toContain('18 15 12 9 6 15')
 
     rerender(
       <StreamingHeader toolName="bash" startTime={now} isExpanded={false} onToggle={() => {}} />,
     )
-    expect(scope.getByText('▶')).toBeTruthy()
+    // Collapsed: expand icon (chevron down, points "6 9 12 15 18 9")
+    const svg2 = container.querySelector('button svg')!
+    const polyline2 = svg2.querySelector('polyline')!
+    expect(polyline2.getAttribute('points')).toContain('6 9 12 15 18 9')
   })
 })
 
 describe('CompletedHeader', () => {
-  it('renders summary text with correct format', () => {
+  it('renders duration and step count', () => {
     const { container } = render(
       <CompletedHeader totalSteps={3} durationSeconds={5} isExpanded={false} onToggle={() => {}} />,
     )
-    const scope = within(container)
-    expect(scope.getByText(/Used 3 tools \(5s\)/)).toBeTruthy()
+    expect(container.textContent).toMatch(/Thought for 5 seconds/)
+    expect(container.textContent).toMatch(/3 steps/)
   })
 
-  it('onToggle fires on click (entire header is clickable)', () => {
+  it('onToggle fires on click', () => {
     const onToggle = vi.fn()
     const { container } = render(
       <CompletedHeader totalSteps={2} durationSeconds={10} isExpanded={false} onToggle={onToggle} />,
     )
-    const scope = within(container)
-    const header = scope.getByRole('button')
-    fireEvent.click(header)
+    // Click the outer div (role="button")
+    const outerButton = container.querySelector('[role="button"]')!
+    fireEvent.click(outerButton)
     expect(onToggle).toHaveBeenCalledOnce()
   })
 
-  it('shows ▼ when expanded and ▶ when collapsed', () => {
+  it('renders fold/expand icon svgs', () => {
     const { container, rerender } = render(
       <CompletedHeader totalSteps={2} durationSeconds={3} isExpanded={true} onToggle={() => {}} />,
     )
-    const scope = within(container)
-    expect(scope.getByText('▼')).toBeTruthy()
+    // Expanded: fold icon (chevron up)
+    const svg = container.querySelector('button svg')!
+    const polyline = svg.querySelector('polyline')!
+    expect(polyline.getAttribute('points')).toContain('18 15 12 9 6 15')
 
     rerender(
       <CompletedHeader totalSteps={2} durationSeconds={3} isExpanded={false} onToggle={() => {}} />,
     )
-    expect(scope.getByText('▶')).toBeTruthy()
+    // Collapsed: expand icon (chevron down)
+    const svg2 = container.querySelector('button svg')!
+    const polyline2 = svg2.querySelector('polyline')!
+    expect(polyline2.getAttribute('points')).toContain('6 9 12 15 18 9')
   })
 })

@@ -37,26 +37,36 @@ export const ToolHeader = memo(function ToolHeader({
   )
 })
 
+/**
+ * StateIcon — 12px timeline-scale icon matching Onyx's stroke-text-02 style.
+ * Used in both ToolHeader and TimelineRail.
+ */
 export function StateIcon({
   state,
   className,
+  size = 12,
 }: {
   state: ToolRenderState
   className?: string
+  size?: number
 }) {
   const style: React.CSSProperties = {
-    width: 16,
-    height: 16,
+    width: size,
+    height: size,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    // Onyx uses stroke-text-02 — a muted gray, not bright colors
+    color: state === 'error'
+      ? 'var(--color-error, #ef4444)'
+      : 'var(--color-text-02, #71717a)',
   }
 
   if (state === 'error') {
     return (
-      <span className={className} style={{ ...style, color: 'var(--color-error, #ef4444)' }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <span className={className} style={style}>
+        <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
           <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
@@ -66,8 +76,8 @@ export function StateIcon({
 
   if (state === 'complete') {
     return (
-      <span className={className} style={{ ...style, color: 'var(--color-success, #22c55e)' }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <span className={className} style={style}>
+        <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
           <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -75,10 +85,10 @@ export function StateIcon({
     )
   }
 
-  // inprogress
+  // inprogress — dashed circle
   return (
-    <span className={className} style={{ ...style, color: 'var(--color-muted, #a1a1aa)' }}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <span className={className} style={style}>
+      <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
       </svg>
     </span>

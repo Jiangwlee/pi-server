@@ -75,8 +75,8 @@ describe('TimelineStep', () => {
 
     const topConnector2 = screen.getByTestId('rail-top-connector')
     expect(topConnector2.getAttribute('data-visible')).toBe('true')
-    const bottomConnector2 = screen.getByTestId('rail-bottom-connector')
-    expect(bottomConnector2.getAttribute('data-visible')).toBe('false')
+    // Bottom connector is omitted when isLast
+    expect(screen.queryByTestId('rail-bottom-connector')).toBeNull()
   })
 
   it('renders within a flex container', () => {
@@ -92,6 +92,6 @@ describe('TimelineStep', () => {
       <TimelineStep toolCall={makeToolCall()} state="error" isExpanded={true} />,
     )
     const surface = screen.getByTestId('timeline-surface')
-    expect(surface.className).toContain('bg-error')
+    expect(surface.className).toContain('bg-red-500')
   })
 })

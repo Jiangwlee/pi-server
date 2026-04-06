@@ -1,15 +1,6 @@
 /**
  * TimelineRail — left-side icon column with 1px vertical connectors.
- *
- * Renders a fixed-width column containing:
- *  - Top connector line (hidden when isFirst)
- *  - Centered StateIcon reflecting the tool execution state
- *  - Bottom connector line (hidden when isLast)
- *
- * Props:
- *  - state: ToolRenderState ('inprogress' | 'complete' | 'error')
- *  - isFirst?: boolean — hides the top connector
- *  - isLast?: boolean — hides the bottom connector
+ * Matches Onyx's TimelineIconColumn layout.
  */
 import { memo } from 'react'
 import type { ToolRenderState } from '../../../tools/types.js'
@@ -28,32 +19,47 @@ export const TimelineRail = memo(function TimelineRail({
 }: TimelineRailProps) {
   return (
     <div
-      className="w-[var(--tl-rail-width)] flex flex-col items-center flex-shrink-0"
+      className="relative flex flex-col items-center w-[var(--tl-rail-width)]"
       data-testid="timeline-rail"
     >
-      {/* Top connector */}
-      <div
-        className="w-px flex-none"
-        style={{
-          height: 'var(--tl-step-top-padding)',
-          backgroundColor: isFirst ? 'transparent' : 'var(--tl-connector-color)',
-        }}
-        data-testid="rail-top-connector"
-        data-visible={!isFirst}
-      />
-      {/* Icon */}
-      <div className="flex items-center justify-center flex-none" data-testid="rail-icon">
-        <StateIcon state={state} />
+      {/* Icon row — fixed height matching step header */}
+      <div className="w-full shrink-0 flex flex-col items-center h-[var(--tl-step-header-height)]">
+        {/* Top connector */}
+        <div
+          className="w-px"
+          style={{
+            height: 'calc(var(--tl-step-top-padding) * 2)',
+            backgroundColor: isFirst ? 'transparent' : 'var(--tl-connector-color)',
+          }}
+          data-testid="rail-top-connector"
+          data-visible={!isFirst}
+        />
+        {/* Icon wrapper — 1.25rem square, centered */}
+        <div
+          className="shrink-0 flex items-center justify-center"
+          style={{
+            width: 'var(--tl-branch-icon-wrapper-size)',
+            height: 'var(--tl-branch-icon-wrapper-size)',
+          }}
+          data-testid="rail-icon"
+        >
+          <StateIcon state={state} />
+        </div>
+        {/* Bottom connector within header row */}
+        <div
+          className="w-px flex-1"
+          style={{ backgroundColor: 'var(--tl-connector-color)' }}
+        />
       </div>
-      {/* Bottom connector */}
-      <div
-        className="w-px flex-1"
-        style={{
-          backgroundColor: isLast ? 'transparent' : 'var(--tl-connector-color)',
-        }}
-        data-testid="rail-bottom-connector"
-        data-visible={!isLast}
-      />
+      {/* Bottom connector extending to next step */}
+      {!isLast && (
+        <div
+          className="w-px flex-1"
+          style={{ backgroundColor: 'var(--tl-connector-color)' }}
+          data-testid="rail-bottom-connector"
+          data-visible={!isLast}
+        />
+      )}
     </div>
   )
 })

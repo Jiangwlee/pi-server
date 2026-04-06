@@ -1,15 +1,6 @@
 /**
- * TimelineSurface — background container with rounded corners and color theming.
- *
- * Wraps step content with a configurable background and independently controlled
- * top/bottom border radii.
- *
- * Props:
- *  - children: ReactNode
- *  - className?: string — additional classes
- *  - roundedTop?: boolean — apply rounded-t-xl
- *  - roundedBottom?: boolean — apply rounded-b-xl
- *  - background?: 'tint' | 'transparent' | 'error'
+ * TimelineSurface — background container matching Onyx's TimelineSurface.
+ * Uses bg-background-tint-00 equivalent for subtle tint.
  */
 import { memo } from 'react'
 import type { ReactNode } from 'react'
@@ -22,12 +13,6 @@ export interface TimelineSurfaceProps {
   background?: 'tint' | 'transparent' | 'error'
 }
 
-const bgMap: Record<string, string> = {
-  tint: 'bg-panel-elevated',
-  error: 'bg-error/10',
-  transparent: '',
-}
-
 export const TimelineSurface = memo(function TimelineSurface({
   children,
   className,
@@ -35,9 +20,15 @@ export const TimelineSurface = memo(function TimelineSurface({
   roundedBottom,
   background = 'tint',
 }: TimelineSurfaceProps) {
+  const bgClass = background === 'tint'
+    ? 'bg-black/[0.02] dark:bg-white/[0.03]'
+    : background === 'error'
+      ? 'bg-red-500/[0.06]'
+      : ''
+
   const classes = [
-    'flex-1 min-w-0',
-    bgMap[background] || '',
+    'flex-1 min-w-0 transition-colors duration-200',
+    bgClass,
     roundedTop ? 'rounded-t-xl' : '',
     roundedBottom ? 'rounded-b-xl' : '',
     className || '',

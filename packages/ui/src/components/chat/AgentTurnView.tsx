@@ -24,7 +24,7 @@ export const AgentTurnView = memo(function AgentTurnView({
   const hasSteps = turn.steps.length > 0
 
   return (
-    <>
+    <div className="flex flex-col w-full">
       {hasSteps && (
         <ToolTimeline
           steps={turn.steps}
@@ -41,6 +41,6 @@ export const AgentTurnView = memo(function AgentTurnView({
           classNames={classNames}
         />
       )}
-    </>
+    </div>
   )
 })
