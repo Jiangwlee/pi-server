@@ -24,7 +24,7 @@ export default function ChatLayoutPage({ children }: { children: ReactNode }) {
     >
       <ChatLayout
         classNames={{
-          root: 'h-screen',
+          root: 'h-screen flex flex-col',
         }}
         sidebar={
           <div className="p-4">
