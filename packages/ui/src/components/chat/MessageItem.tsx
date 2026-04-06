@@ -106,26 +106,28 @@ export const MessageItem = memo(function MessageItem({
     return (
       <div className={rootClassName} data-role="user">
         {renderAvatar?.(message)}
-        <div className={contentClass}>
-          {message.attachments && message.attachments.length > 0 ? (
-            <div className={classNames?.attachments ?? defaults.attachments}>
-              {message.attachments.map((att) => (
-                <img
-                  key={att.fileId}
-                  src={att.thumbnailUrl}
-                  alt={att.fileName}
-                  className={classNames?.attachmentThumbnail ?? defaults.attachmentThumbnail}
-                />
-              ))}
-            </div>
-          ) : null}
-          <TextBlock
-            content={{ type: 'text', text: userText }}
-            streaming={message.streaming}
-            className={classNames?.textBlock}
-          />
+        <div className="flex flex-col">
+          <div className={contentClass}>
+            {message.attachments && message.attachments.length > 0 ? (
+              <div className={classNames?.attachments ?? defaults.attachments}>
+                {message.attachments.map((att) => (
+                  <img
+                    key={att.fileId}
+                    src={att.thumbnailUrl}
+                    alt={att.fileName}
+                    className={classNames?.attachmentThumbnail ?? defaults.attachmentThumbnail}
+                  />
+                ))}
+              </div>
+            ) : null}
+            <TextBlock
+              content={{ type: 'text', text: userText }}
+              streaming={message.streaming}
+              className={classNames?.textBlock}
+            />
+          </div>
+          {renderMetadata(message, classNames)}
         </div>
-        {renderMetadata(message, classNames)}
       </div>
     )
   }
@@ -135,10 +137,12 @@ export const MessageItem = memo(function MessageItem({
 
     return (
       <div className={rootClassName} data-role="tool">
-        <div className={contentClass}>
-          <ToolResultBlock message={message} />
+        <div className="flex flex-col">
+          <div className={contentClass}>
+            <ToolResultBlock message={message} />
+          </div>
+          {renderMetadata(message, classNames)}
         </div>
-        {renderMetadata(message, classNames)}
       </div>
     )
   }
@@ -148,61 +152,63 @@ export const MessageItem = memo(function MessageItem({
   return (
     <div className={rootClassName} data-role="assistant">
       {renderAvatar?.(message)}
-      <div className={contentClass}>
-        {message.content.map((content, index) => {
-          if (content.type === 'text') {
-            return (
-              <TextBlock
-                key={`${message.id}-text-${index}`}
-                content={content}
-                streaming={message.streaming}
-                className={classNames?.textBlock}
-              />
-            )
-          }
-          if (content.type === 'thinking') {
-            return (
-              <ThinkingBlock
-                key={`${message.id}-thinking-${index}`}
-                content={content}
-                streaming={message.streaming}
-                className={classNames?.thinkingBlock}
-              />
-            )
-          }
-          if (content.type === 'toolCall') {
-            const result = toolResultsByCallId?.get(content.id)
-            return (
-              <ToolCallBlock
-                key={`${message.id}-toolCall-${index}`}
-                toolCall={content}
-                result={result}
-                streaming={message.streaming}
-                className={classNames?.toolCallBlock}
-              />
-            )
-          }
-          if (content.type === 'image') {
-            return (
-              <ImageBlock
-                key={`${message.id}-image-${index}`}
-                content={content}
-                className={classNames?.imageBlock}
-              />
-            )
-          }
-          return null
-        })}
+      <div className="flex flex-col min-w-0">
+        <div className={contentClass}>
+          {message.content.map((content, index) => {
+            if (content.type === 'text') {
+              return (
+                <TextBlock
+                  key={`${message.id}-text-${index}`}
+                  content={content}
+                  streaming={message.streaming}
+                  className={classNames?.textBlock}
+                />
+              )
+            }
+            if (content.type === 'thinking') {
+              return (
+                <ThinkingBlock
+                  key={`${message.id}-thinking-${index}`}
+                  content={content}
+                  streaming={message.streaming}
+                  className={classNames?.thinkingBlock}
+                />
+              )
+            }
+            if (content.type === 'toolCall') {
+              const result = toolResultsByCallId?.get(content.id)
+              return (
+                <ToolCallBlock
+                  key={`${message.id}-toolCall-${index}`}
+                  toolCall={content}
+                  result={result}
+                  streaming={message.streaming}
+                  className={classNames?.toolCallBlock}
+                />
+              )
+            }
+            if (content.type === 'image') {
+              return (
+                <ImageBlock
+                  key={`${message.id}-image-${index}`}
+                  content={content}
+                  className={classNames?.imageBlock}
+                />
+              )
+            }
+            return null
+          })}
+        </div>
+        {(onCopy || onRegenerate) ? (
+          <MessageToolbar
+            text={extractText(message)}
+            onCopy={onCopy ? () => onCopy(message) : undefined}
+            onRegenerate={onRegenerate ? () => onRegenerate(message) : undefined}
+            className={classNames?.toolbar}
+          />
+        ) : null}
+        {renderMetadata(message, classNames)}
       </div>
-      {(onCopy || onRegenerate) ? (
-        <MessageToolbar
-          text={extractText(message)}
-          onCopy={onCopy ? () => onCopy(message) : undefined}
-          onRegenerate={onRegenerate ? () => onRegenerate(message) : undefined}
-          className={classNames?.toolbar}
-        />
-      ) : null}
-      {renderMetadata(message, classNames)}
     </div>
   )
 })
