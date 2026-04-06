@@ -48,7 +48,7 @@ export const ChatInput = memo(function ChatInput(
     topAddons,
     bottomAddons,
     minRows = 1,
-    maxRows = 6,
+    maxRows = 8,
     ref,
   }: ChatInputProps,
 ) {
