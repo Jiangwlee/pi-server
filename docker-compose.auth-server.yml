@@ -1,0 +1,35 @@
+# 用法：
+#   docker compose -f docker-compose.auth-server.yml --env-file .env up -d
+# 不加 --env-file 时默认读取同目录 .env（compose 标准行为）
+
+services:
+  auth-server:
+    build:
+      context: .
+      dockerfile: packages/server/docker/Dockerfile
+    image: ${PI_SERVER_IMAGE:-pi-server:local}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PI_ROLE: auth-server
+      PORT: ${PI_AUTH_PORT:-3001}
+      AUTH_SERVER_TOKEN: ${AUTH_SERVER_TOKEN}
+      TZ: ${TZ:-Asia/Shanghai}
+      NODE_USE_ENV_PROXY: "1"
+    ports:
+      - "${PI_AUTH_PORT:-3001}:${PI_AUTH_PORT:-3001}"
+    volumes:
+      - ${HOME}/.pi:/root/.pi:ro
+      - ${HOME}/.pi-server:/root/.pi-server:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          node -e "fetch('http://127.0.0.1:${PI_AUTH_PORT:-3001}/auth')
+          .then(r=>process.exit((r.status===401||r.ok)?0:1)).catch(()=>process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
+    restart: unless-stopped

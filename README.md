@@ -121,7 +121,7 @@ pi-server supports three deployment modes:
 | Mode | Flag | Use Case |
 |------|------|----------|
 | **Standalone** | (default) | Single machine, reads local `~/.pi/agent/auth.json` |
-| **Auth Server** | `--auth-server` | Dedicated credential server, exposes `GET /auth.json` with Bearer auth |
+| **Auth Server** | `--auth-server` | Dedicated credential server, exposes `GET /auth` with Bearer auth |
 | **Auth Proxy** | `--auth-proxy-url` | Application node, pulls credentials from auth server every 30s |
 
 In distributed deployments, each node is fully independent — own users, own database, own sessions. The **only** shared state is LLM provider credentials, synchronized via Auth Server.
@@ -191,7 +191,7 @@ docker compose up -d
 
 ```bash
 # Check auth-server is serving credentials
-curl -s -H "Authorization: Bearer $AUTH_SERVER_TOKEN" http://localhost:3001/auth.json | head -c 200
+curl -s -H "Authorization: Bearer $AUTH_SERVER_TOKEN" http://localhost:3001/auth | head -c 200
 
 # Login with the auto-created user (through frontend proxy)
 curl -s -X POST http://localhost:3100/backend/auth/login \
@@ -222,6 +222,64 @@ docker compose down -v
 docker compose build && docker compose up -d
 ```
 
+### Docker Compose (Auth Server Only)
+
+For distributed deployments, the Auth Server can run alone on a credential-holding host (where `pi login` was performed), while application nodes connect in Auth Proxy mode from elsewhere.
+
+Use `docker-compose.auth-server.yml` — a minimal single-container compose that mounts `~/.pi/` and `~/.pi-server/` from the host and only exposes the `/auth` endpoint.
+
+#### Credential sources
+
+The auth-server merges two host files into the response:
+
+| Host path (read-only) | Content | Used for |
+|-----------------------|---------|----------|
+| `~/.pi-server/auth-config.yaml` | `credentials` map (api_key, oauth) + `models` list | Anthropic / Kimi / LiteLLM / custom providers |
+| `~/.pi/agent/auth.json` | `github-copilot` OAuth refresh token (merged in as `credentials.github-copilot`) | GitHub Copilot |
+
+Example `~/.pi-server/auth-config.yaml`:
+
+```yaml
+credentials:
+  kimi-coding:
+    type: api_key
+    key: sk-xxx
+  litellm:
+    type: api_key
+    key: sk-xxx
+    baseUrl: http://localhost:10000
+models:
+  - id: claude-sonnet-4.6
+    provider: github-copilot
+    name: Claude Sonnet 4.6
+  - id: qwen3-32b
+    provider: litellm
+    name: Qwen3 32B
+```
+
+#### Configure
+
+Reuse the same `.env` as the main compose (only `AUTH_SERVER_TOKEN` and optional `PI_AUTH_PORT` / `TZ` are read by this service):
+
+```bash
+AUTH_SERVER_TOKEN=your-shared-bearer-token
+PI_AUTH_PORT=3001           # Optional, defaults to 3001 (controls container port + host mapping + healthcheck)
+TZ=Asia/Shanghai             # Optional
+```
+
+#### Start
+
+```bash
+docker compose -f docker-compose.auth-server.yml up -d --build
+
+# Verify
+curl -s -H "Authorization: Bearer $AUTH_SERVER_TOKEN" http://localhost:3001/auth | jq
+```
+
+#### Connect application nodes
+
+On each application node, run in Auth Proxy mode (see "Auth Proxy Mode" below) pointing at this auth-server's URL.
+
 ### Standalone Mode (No Docker)
 
 For single-machine deployment without credential sharing:
@@ -245,7 +303,8 @@ Run a dedicated credential server on the machine where `pi login` was performed:
 ```bash
 export AUTH_SERVER_TOKEN="shared-bearer-token"
 node packages/server/dist/index.js --auth-server
-# Serves GET /auth.json on PORT (default 3000), protected by Bearer token
+# Serves GET /auth on PORT (default 3000), protected by Bearer token
+# Reads ~/.pi-server/auth-config.yaml + merges github-copilot from ~/.pi/agent/auth.json
 ```
 
 ### Auth Proxy Mode
@@ -275,7 +334,7 @@ Sync behavior:
 | `FRONTEND_URL` | No | `http://localhost:3100` | Frontend redirect target after GitHub OAuth |
 | `GITHUB_CLIENT_ID` | No | — | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | No | — | GitHub OAuth client secret |
-| `AUTH_SERVER_TOKEN` | Yes (auth-server) | — | Bearer token for `/auth.json` |
+| `AUTH_SERVER_TOKEN` | Yes (auth-server) | — | Bearer token for `/auth` |
 | `LOG_LEVEL` | No | `info` | `debug` / `info` / `warn` / `error` |
 | `LOG_FORMAT` | No | `json` | `json` / `plain` |
 | `SSE_RING_BUFFER_SIZE` | No | `200` | SSE ring buffer size per session |
