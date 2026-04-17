@@ -2,12 +2,11 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { bodyLimit } from 'hono/body-limit'
-import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 
 import { loadConfig } from './config.js'
+import { readAuthConfig } from './auth/auth-config.js'
 import { initDb } from './db.js'
 import { UserStore } from './stores/user-store.js'
 import { SessionStore } from './stores/session-store.js'
@@ -46,18 +45,18 @@ if (config.authServer) {
   })
   app.use('*', createRequestLoggerMiddleware())
 
-  app.get('/auth.json', (c) => {
+  app.get('/auth', (c) => {
     const token = c.req.header('Authorization')
     if (!token || token !== `Bearer ${config.authServerToken}`) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
     try {
-      const authPath = join(homedir(), '.pi', 'agent', 'auth.json')
-      const data = JSON.parse(readFileSync(authPath, 'utf-8'))
+      const data = readAuthConfig()
       return c.json(data)
-    } catch {
-      return c.json({ error: 'auth.json not found' }, 500)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to read auth config'
+      return c.json({ error: message }, 500)
     }
   })
 
