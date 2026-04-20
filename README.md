@@ -234,8 +234,10 @@ The auth-server merges two host files into the response:
 
 | Host path (read-only) | Content | Used for |
 |-----------------------|---------|----------|
-| `~/.pi-server/auth-config.yaml` | `credentials` map (api_key, oauth) + `models` list | Anthropic / Kimi / LiteLLM / custom providers |
-| `~/.pi/agent/auth.json` | `github-copilot` OAuth refresh token (merged in as `credentials.github-copilot`) | GitHub Copilot |
+| `~/.pi-server/auth-config.yaml` | `credentials` map (api_key entries only) + `models` list | Anthropic / Kimi / LiteLLM / custom providers |
+| `~/.pi/agent/auth.json` | All `type: oauth` entries (github-copilot / openai-codex / anthropic / google-gemini-cli / …) passed through as-is | Pi CLI–logged OAuth providers |
+
+Only OAuth providers are read from Pi auth.json; `api_key` entries there are ignored to avoid duplicates (manage API keys exclusively via YAML). OAuth entries are passed through with full fields (`refresh`, `access`, `expires`, provider-specific like `accountId`), letting downstream consumers reconstruct the native Pi SDK credential without re-running refresh.
 
 Example `~/.pi-server/auth-config.yaml`:
 
@@ -252,10 +254,15 @@ models:
   - id: claude-sonnet-4.6
     provider: github-copilot
     name: Claude Sonnet 4.6
+  - id: gpt-5-codex
+    provider: openai-codex
+    name: GPT-5 Codex
   - id: qwen3-32b
     provider: litellm
     name: Qwen3 32B
 ```
+
+You don't need to declare `github-copilot` / `openai-codex` in `credentials:` — whatever is logged in via `pi auth login <provider>` flows through automatically.
 
 #### Configure
 
@@ -304,7 +311,7 @@ Run a dedicated credential server on the machine where `pi login` was performed:
 export AUTH_SERVER_TOKEN="shared-bearer-token"
 node packages/server/dist/index.js --auth-server
 # Serves GET /auth on PORT (default 3000), protected by Bearer token
-# Reads ~/.pi-server/auth-config.yaml + merges github-copilot from ~/.pi/agent/auth.json
+# Reads ~/.pi-server/auth-config.yaml (api_key) + merges all oauth providers from ~/.pi/agent/auth.json
 ```
 
 ### Auth Proxy Mode
