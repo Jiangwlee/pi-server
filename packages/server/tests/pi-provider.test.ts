@@ -1,8 +1,17 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { PiProvider } from '../src/runtime/pi-provider.js'
 
-// Mock fetch for auth-proxy tests
 const originalFetch = globalThis.fetch
+
+function wrappedResponse(credentials: Record<string, unknown>, models: unknown[] = []) {
+  const body = { credentials, models }
+  return {
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(JSON.stringify(body)),
+    json: () => Promise.resolve(body),
+  }
+}
 
 describe('PiProvider', () => {
   afterEach(() => {
@@ -11,9 +20,6 @@ describe('PiProvider', () => {
   })
 
   it('should create with local auth storage when no proxy url', async () => {
-    // This test just verifies construction doesn't throw
-    // In real usage it would read ~/.pi/agent/auth.json
-    // We pass a non-existent path to avoid side effects
     const provider = new PiProvider({})
     expect(provider.getAuthStorage()).toBeDefined()
     expect(provider.getModelRegistry()).toBeDefined()
@@ -34,30 +40,31 @@ describe('PiProvider', () => {
     provider.dispose()
   })
 
-  it('should succeed on first pull and populate auth storage', async () => {
-    const mockData = {
-      'anthropic': { apiKey: 'sk-ant-test' },
-      'openai': { apiKey: 'sk-test' },
-    }
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      text: () => Promise.resolve(JSON.stringify(mockData)),
-      json: () => Promise.resolve(mockData),
-    })
+  it('fetches /auth and unwraps wrapped payload into native auth.json for InMemoryBackend', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      wrappedResponse({
+        'github-copilot': { type: 'oauth', refresh: 'ghu_x', access: '', expires: 0 },
+        'openai-codex': {
+          type: 'oauth',
+          refresh: 'rt_x',
+          access: 'eyJ...',
+          expires: 1777471561879,
+          accountId: '1e6cf163',
+        },
+        'kimi-coding': { type: 'api_key', key: 'sk-kimi' },
+      }),
+    )
 
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'my-token',
-      initialSyncMaxAttempts: 2,
+      initialSyncMaxAttempts: 1,
       initialSyncRetryMs: 0,
     })
-
     await provider.init()
 
-    // Verify fetch was called with correct auth header
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'http://auth-server:3001/auth.json',
+      'http://auth-server:3001/auth',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer my-token',
@@ -65,42 +72,51 @@ describe('PiProvider', () => {
       }),
     )
 
-    expect(provider.getAuthStorage()).toBeDefined()
+    const storage = provider.getAuthStorage()
+    expect(storage.has('github-copilot')).toBe(true)
+    expect(storage.has('openai-codex')).toBe(true)
+    expect(storage.has('kimi-coding')).toBe(true)
+    expect(storage.get('openai-codex')).toMatchObject({
+      type: 'oauth',
+      refresh: 'rt_x',
+      accountId: '1e6cf163',
+    })
+
     provider.dispose()
   })
 
   it('should use replace-all semantics on sync', async () => {
     let callCount = 0
     const responses = [
-      { 'anthropic': { apiKey: 'sk-1' }, 'openai': { apiKey: 'sk-2' } },
-      { 'anthropic': { apiKey: 'sk-1-updated' } }, // openai removed
+      {
+        'github-copilot': { type: 'oauth', refresh: 'rt-1' },
+        'openai-codex': { type: 'oauth', refresh: 'rt-codex' },
+      },
+      {
+        'github-copilot': { type: 'oauth', refresh: 'rt-1-updated' },
+      },
     ]
 
     globalThis.fetch = vi.fn().mockImplementation(() => {
       const data = responses[callCount++] ?? responses[responses.length - 1]
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve(JSON.stringify(data)),
-        json: () => Promise.resolve(data),
-      })
+      return Promise.resolve(wrappedResponse(data))
     })
 
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'tok',
-      initialSyncMaxAttempts: 2,
+      initialSyncMaxAttempts: 1,
       initialSyncRetryMs: 0,
     })
 
     await provider.init()
+    const storage = provider.getAuthStorage()
+    expect(storage.has('openai-codex')).toBe(true)
 
-    // Trigger manual sync to simulate interval
     await provider.syncFromProxy()
+    expect(storage.has('github-copilot')).toBe(true)
+    expect(storage.has('openai-codex')).toBe(false)
 
-    // After second sync, openai should be gone (replace-all)
-    // We verify by checking the fetch was called twice
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
     provider.dispose()
   })
 
@@ -109,12 +125,11 @@ describe('PiProvider', () => {
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve(JSON.stringify({ 'anthropic': { apiKey: 'sk-good' } })),
-          json: () => Promise.resolve({ 'anthropic': { apiKey: 'sk-good' } }),
-        })
+        return Promise.resolve(
+          wrappedResponse({
+            'github-copilot': { type: 'oauth', refresh: 'rt-good' },
+          }),
+        )
       }
       return Promise.reject(new Error('Network down'))
     })
@@ -122,21 +137,18 @@ describe('PiProvider', () => {
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'tok',
-      initialSyncMaxAttempts: 2,
+      initialSyncMaxAttempts: 1,
       initialSyncRetryMs: 0,
     })
 
     await provider.init()
+    await provider.syncFromProxy().catch(() => {})
 
-    // Second sync fails — syncFromProxy throws, but interval catches it
-    // Simulate interval behavior: catch + retain last-good
-    await provider.syncFromProxy().catch(() => {}) // swallowed like interval does
-
-    expect(provider.getAuthStorage()).toBeDefined()
+    expect(provider.getAuthStorage().has('github-copilot')).toBe(true)
     provider.dispose()
   })
 
-  it('should clean up interval on dispose', async () => {
+  it('handles missing credentials field gracefully (empty unwrap)', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -147,15 +159,27 @@ describe('PiProvider', () => {
     const provider = new PiProvider({
       authProxyUrl: 'http://auth-server:3001',
       authProxyToken: 'tok',
-      initialSyncMaxAttempts: 2,
+      initialSyncMaxAttempts: 1,
+      initialSyncRetryMs: 0,
+    })
+
+    await provider.init()
+    expect(provider.getAuthStorage().has('github-copilot')).toBe(false)
+    provider.dispose()
+  })
+
+  it('should clean up interval on dispose', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(wrappedResponse({}))
+
+    const provider = new PiProvider({
+      authProxyUrl: 'http://auth-server:3001',
+      authProxyToken: 'tok',
+      initialSyncMaxAttempts: 1,
       initialSyncRetryMs: 0,
     })
 
     await provider.init()
     provider.dispose()
-
-    // After dispose, no more interval ticks should happen
-    // Verified by the fact dispose doesn't throw and cleanup works
     expect(true).toBe(true)
   })
 })

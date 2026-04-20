@@ -55,7 +55,7 @@ export class PiProvider {
   async syncFromProxy(): Promise<void> {
     if (!this.proxyUrl || !this.backend) return
 
-    const res = await fetch(`${this.proxyUrl}/auth.json`, {
+    const res = await fetch(`${this.proxyUrl}/auth`, {
       headers: {
         Authorization: `Bearer ${this.proxyToken}`,
         'User-Agent': 'pi-server',
@@ -67,17 +67,24 @@ export class PiProvider {
       throw new Error(`Auth proxy returned ${res.status}`)
     }
 
-    const data = await res.json()
+    const wrapped = (await res.json()) as { credentials?: Record<string, unknown> } | null
+    // credentials entries are already in Pi SDK native auth.json shape ({ [provider]: { type, ...fields } });
+    // unwrap only — no field mapping.
+    const nativeAuthJson =
+      wrapped && typeof wrapped === 'object' && wrapped.credentials ? wrapped.credentials : {}
 
     // Replace-all semantics: write full remote data, overwriting local
     this.backend.withLock(() => ({
       result: undefined,
-      next: JSON.stringify(data, null, 2),
+      next: JSON.stringify(nativeAuthJson, null, 2),
     }))
 
     this.authStorage.reload()
     this.modelRegistry.refresh()
-    logger.debug({ proxyUrl: this.proxyUrl }, 'pi_provider.sync_succeeded')
+    logger.debug(
+      { proxyUrl: this.proxyUrl, providers: Object.keys(nativeAuthJson) },
+      'pi_provider.sync_succeeded',
+    )
   }
 
   private async syncFromProxyWithRetry(): Promise<void> {
