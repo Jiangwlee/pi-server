@@ -57,19 +57,37 @@ const PI_AUTH_DATA = {
 }
 
 describe('readAuthConfig', () => {
-  it('merges github-copilot from Pi auth.json into YAML config', () => {
+  it('passes through all oauth providers from Pi auth.json with full fields', () => {
     const dir = makeTmpDir()
     try {
       const yamlPath = writeYaml(dir, VALID_YAML)
-      const piPath = writePiAuth(dir, PI_AUTH_DATA)
+      const piPath = writePiAuth(dir, {
+        ...PI_AUTH_DATA,
+        'openai-codex': {
+          type: 'oauth',
+          refresh: 'rt_xxx',
+          access: 'eyJ...',
+          expires: 1776152371964,
+          accountId: '1e6cf163-abcd',
+        },
+      })
       const config = readAuthConfig(yamlPath, piPath)
 
       expect(config.credentials['github-copilot']).toMatchObject({
         type: 'oauth',
-        key: 'ghu_test_token',
+        refresh: 'ghu_test_token',
+        access: 'tid=abc',
+        expires: 1775737374000,
       })
-      expect(config.credentials['kimi-coding'].key).toBe('sk-kimi')
-      expect(config.credentials['litellm'].baseUrl).toBe('http://localhost:10000')
+      expect(config.credentials['openai-codex']).toMatchObject({
+        type: 'oauth',
+        refresh: 'rt_xxx',
+        access: 'eyJ...',
+        expires: 1776152371964,
+        accountId: '1e6cf163-abcd',
+      })
+      expect((config.credentials['kimi-coding'] as { key: string }).key).toBe('sk-kimi')
+      expect((config.credentials['litellm'] as { baseUrl?: string }).baseUrl).toBe('http://localhost:10000')
       expect(config.models).toHaveLength(2)
     } finally {
       rmSync(dir, { recursive: true })
@@ -85,7 +103,11 @@ describe('readAuthConfig', () => {
 
       expect(config.credentials['github-copilot']).toMatchObject({
         type: 'oauth',
-        key: 'ghu_test_token',
+        refresh: 'ghu_test_token',
+      })
+      expect(config.credentials['openai-codex']).toMatchObject({
+        type: 'oauth',
+        refresh: 'rt_xxx',
       })
       expect(config.models).toEqual([])
     } finally {
@@ -101,20 +123,20 @@ describe('readAuthConfig', () => {
       const config = readAuthConfig(yamlPath, piPath)
 
       expect(config.credentials['github-copilot']).toBeUndefined()
-      expect(config.credentials['kimi-coding'].key).toBe('sk-kimi')
+      expect((config.credentials['kimi-coding'] as { key: string }).key).toBe('sk-kimi')
     } finally {
       rmSync(dir, { recursive: true })
     }
   })
 
-  it('Pi auth.json overrides github-copilot in YAML', () => {
+  it('pi auth.json oauth entry overrides yaml-defined provider with the same name', () => {
     const dir = makeTmpDir()
     try {
       const yamlWithCopilot = `
 credentials:
   github-copilot:
     type: oauth
-    key: ghu_old_from_yaml
+    refresh: ghu_old_from_yaml
   kimi-coding:
     type: api_key
     key: sk-kimi
@@ -124,7 +146,60 @@ models: []
       const piPath = writePiAuth(dir, PI_AUTH_DATA)
       const config = readAuthConfig(yamlPath, piPath)
 
-      expect(config.credentials['github-copilot'].key).toBe('ghu_test_token')
+      expect(config.credentials['github-copilot']).toMatchObject({
+        type: 'oauth',
+        refresh: 'ghu_test_token',
+      })
+    } finally {
+      rmSync(dir, { recursive: true })
+    }
+  })
+
+  it('preserves api_key credentials from yaml untouched', () => {
+    const dir = makeTmpDir()
+    try {
+      const yamlPath = writeYaml(
+        dir,
+        [
+          'credentials:',
+          '  kimi-coding:',
+          '    type: api_key',
+          '    key: sk-kimi',
+          '    baseUrl: https://api.moonshot.cn/v1',
+          'models: []',
+          '',
+        ].join('\n'),
+      )
+      const piPath = writePiAuth(dir, {})
+      const config = readAuthConfig(yamlPath, piPath)
+
+      const kimi = config.credentials['kimi-coding'] as Record<string, unknown>
+      expect(kimi).toMatchObject({
+        type: 'api_key',
+        key: 'sk-kimi',
+        baseUrl: 'https://api.moonshot.cn/v1',
+      })
+      expect(kimi.refresh).toBeUndefined()
+    } finally {
+      rmSync(dir, { recursive: true })
+    }
+  })
+
+  it('ignores api_key entries in Pi auth.json (managed only via yaml)', () => {
+    const dir = makeTmpDir()
+    try {
+      const yamlPath = join(dir, 'no.yaml')
+      const piPath = writePiAuth(dir, {
+        'kimi-coding': { type: 'api_key', key: 'sk-from-pi' },
+        'github-copilot': { type: 'oauth', refresh: 'ghu_x' },
+      })
+      const config = readAuthConfig(yamlPath, piPath)
+
+      expect(config.credentials['kimi-coding']).toBeUndefined()
+      expect(config.credentials['github-copilot']).toMatchObject({
+        type: 'oauth',
+        refresh: 'ghu_x',
+      })
     } finally {
       rmSync(dir, { recursive: true })
     }

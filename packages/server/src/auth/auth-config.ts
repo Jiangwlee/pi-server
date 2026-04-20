@@ -1,6 +1,6 @@
 // ---
-// purpose: Read ~/.pi-server/auth-config.yaml + merge github-copilot from ~/.pi/agent/auth.json
-// exports: readAuthConfig, AuthConfig, Credential, ModelEntry
+// purpose: Read ~/.pi-server/auth-config.yaml + merge all oauth providers from ~/.pi/agent/auth.json
+// exports: readAuthConfig, AuthConfig, Credential, OAuthCredential, ApiKeyCredential, ModelEntry
 // ---
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -8,12 +8,24 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import yaml from 'js-yaml'
 
-export interface Credential {
-  type: string
+export interface OAuthCredential {
+  type: 'oauth'
+  refresh: string
+  access?: string
+  expires?: number
+  last_update?: string
+  [k: string]: unknown
+}
+
+export interface ApiKeyCredential {
+  type: 'api_key'
   key: string
   baseUrl?: string
   last_update?: string
+  [k: string]: unknown
 }
+
+export type Credential = OAuthCredential | ApiKeyCredential
 
 export interface ModelEntry {
   id: string
@@ -34,10 +46,10 @@ export function readAuthConfig(
   piAuthPath: string = PI_AUTH_PATH,
 ): AuthConfig {
   const base = readAuthConfigYaml(configPath)
-  const piCopilot = readPiCopilotCredential(piAuthPath)
+  const piOauth = readPiOAuthCredentials(piAuthPath)
 
-  if (piCopilot) {
-    base.credentials['github-copilot'] = piCopilot
+  for (const [provider, cred] of Object.entries(piOauth)) {
+    base.credentials[provider] = cred
   }
 
   return base
@@ -68,27 +80,34 @@ function readAuthConfigYaml(path: string): AuthConfig {
   return config as unknown as AuthConfig
 }
 
-interface PiAuthEntry {
-  type: string
-  refresh?: string
-  access?: string
-  expires?: number
-}
+function readPiOAuthCredentials(path: string): Record<string, OAuthCredential> {
+  if (!existsSync(path)) return {}
 
-function readPiCopilotCredential(path: string): Credential | null {
-  if (!existsSync(path)) return null
-
+  let parsed: unknown
   try {
-    const data = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, PiAuthEntry>
-    const copilot = data['github-copilot']
-    if (!copilot?.refresh) return null
-
-    return {
-      type: 'oauth',
-      key: copilot.refresh,
-      last_update: new Date().toISOString(),
-    }
+    parsed = JSON.parse(readFileSync(path, 'utf-8'))
   } catch {
-    return null
+    return {}
   }
+
+  if (!parsed || typeof parsed !== 'object') return {}
+
+  const now = new Date().toISOString()
+  const out: Record<string, OAuthCredential> = {}
+
+  for (const [provider, entry] of Object.entries(parsed as Record<string, unknown>)) {
+    if (!entry || typeof entry !== 'object') continue
+    const e = entry as Record<string, unknown>
+    if (e.type !== 'oauth') continue
+    if (typeof e.refresh !== 'string' || e.refresh.length === 0) continue
+
+    out[provider] = {
+      ...(e as Record<string, unknown>),
+      type: 'oauth',
+      refresh: e.refresh,
+      last_update: now,
+    } as OAuthCredential
+  }
+
+  return out
 }
