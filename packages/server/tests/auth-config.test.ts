@@ -249,6 +249,40 @@ models: []
     }
   })
 
+  it('defaults context_window_size to 128000 when not specified in yaml', () => {
+    const dir = makeTmpDir()
+    try {
+      const yamlPath = writeYaml(dir, VALID_YAML)
+      const config = readAuthConfig(yamlPath, join(dir, 'no.json'))
+      for (const model of config.models) {
+        expect(model.context_window_size).toBe(128000)
+      }
+    } finally {
+      rmSync(dir, { recursive: true })
+    }
+  })
+
+  it('preserves explicit context_window_size from yaml', () => {
+    const dir = makeTmpDir()
+    try {
+      const yamlPath = writeYaml(
+        dir,
+        `
+credentials: {}
+models:
+  - id: gpt-4o
+    provider: openai
+    name: GPT-4o
+    context_window_size: 32000
+`,
+      )
+      const config = readAuthConfig(yamlPath, join(dir, 'no.json'))
+      expect(config.models[0].context_window_size).toBe(32000)
+    } finally {
+      rmSync(dir, { recursive: true })
+    }
+  })
+
   it('ignores Pi auth.json entries without refresh field', () => {
     const dir = makeTmpDir()
     try {

@@ -31,6 +31,7 @@ export interface ModelEntry {
   id: string
   provider: string
   name: string
+  context_window_size: number
 }
 
 export interface AuthConfig {
@@ -77,7 +78,12 @@ function readAuthConfigYaml(path: string): AuthConfig {
     throw new Error('Invalid auth-config: missing or invalid "models" field')
   }
 
-  return config as unknown as AuthConfig
+  const models = (config.models as ModelEntry[]).map((m) => ({
+    ...m,
+    context_window_size: m.context_window_size ?? 128000,
+  }))
+
+  return { credentials: config.credentials as AuthConfig['credentials'], models }
 }
 
 function readPiOAuthCredentials(path: string): Record<string, OAuthCredential> {
